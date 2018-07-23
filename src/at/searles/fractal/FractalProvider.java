@@ -2,10 +2,7 @@ package at.searles.fractal;
 
 import at.searles.fractal.data.FractalData;
 import at.searles.fractal.data.ParameterKey;
-import at.searles.fractal.data.ParameterType;
-import at.searles.fractal.data.Parameters;
 
-import java.lang.reflect.Parameter;
 import java.util.*;
 
 /**
@@ -38,15 +35,20 @@ public class FractalProvider {
      * It is not written directly.
      */
     private final List<ParameterKey> keys;
-    private final HashMap<ParameterKey, Entry> entries;
+    private final HashMap<ParameterKey, ParameterEntry> entries;
+
+    private final List<String> labels;
 
     /**
      * Creates a provider with only one fractal
-     * @param fractal The only fractal.
+     * @param fractalData The only fractal.
      * @return the fractal provider
      */
-    public static FractalProvider singleFractal(Fractal fractal) {
+    public static FractalProvider singleFractal(FractalData fractalData) {
         FractalProvider fractalProvider = new FractalProvider(Collections.emptyList());
+
+        Fractal fractal = Fractal.fromData(fractalData);
+        fractal.compile();
 
         fractalProvider.fractals.put("Fractal", fractal);
         fractalProvider.updateEntries();
@@ -57,13 +59,19 @@ public class FractalProvider {
     /**
      * This one creates a provider for two fractals. One parameter is
      * individual, most likely a bool (eg isJuliaSet).
-     * @param fractal1 first one
-     * @param fractal2 second one
+     * @param fractalData1 first one
+     * @param fractalData2 second one
      * @param individuals parameters that are not shared, eg scale and a boolean
      * @return the fractal provider.
      */
-    public static FractalProvider dualFractal(Fractal fractal1, Fractal fractal2, String...individuals) {
+    public static FractalProvider dualFractal(FractalData fractalData1, FractalData fractalData2, String...individuals) {
         FractalProvider fractalProvider = new FractalProvider(Arrays.asList(individuals));
+
+        Fractal fractal1 = Fractal.fromData(fractalData1);
+        fractal1.compile();
+
+        Fractal fractal2 = Fractal.fromData(fractalData2);
+        fractal2.compile();
 
         fractalProvider.fractals.put("Fractal 1", fractal1);
         fractalProvider.fractals.put("Fractal 2", fractal2);
@@ -79,33 +87,67 @@ public class FractalProvider {
         this.listeners = new HashMap<>();
         this.keys = new ArrayList<>();
         this.entries = new LinkedHashMap<>();
+
+        this.labels = new ArrayList<>();
+    }
+
+    public Iterable<ParameterKey> keys() {
+        return keys;
+    }
+
+    public int parameterCount() {
+        return keys.size();
+    }
+
+    public ParameterEntry getParameter(int index) {
+        if(index >= keys.size()) {
+            throw new IllegalArgumentException("index out of range");
+        }
+
+        ParameterKey key = keys.get(index);
+
+        ParameterEntry entry = entries.get(key);
+
+        if(entry == null) {
+            throw new NullPointerException(String.format("bug, no entry for key %s %s", key.id, key.type));
+        }
+
+        return entry;
     }
 
     // ==== update entries from key fractals ====
 
     private void updateEntries() {
         int individualIndex = 0;
+
         keys.clear();
         entries.clear();
+        labels.clear();
 
         for(Map.Entry<String, Fractal> entry : fractals.entrySet()) {
+            labels.add(entry.getKey());
+
             Fractal fractal = entry.getValue();
 
             for(String id : fractal.data().ids()) {
                 FractalExternData.Entry dataEntry = fractal.data().entry(id);
 
                 if(individualParameters.contains(id)) {
+                    // individual parameters are always new.
                     String label = annotatedId(dataEntry.key.id, entry.getKey());
                     ParameterKey key = new ParameterKey(label, dataEntry.key.type);
 
                     keys.add(individualIndex++, key);
 
+                    // entries will always contain the individual key, but the
+                    // annotated description.
+                    // Thereby, there is an easy-to-resolve representation owner + id.
+
                     String description = String.format("%s (%s)", dataEntry.description, entry.getKey());
                     boolean isDefault = fractal.data().isDefaultValue(id);
                     Object value = fractal.data().value(id);
 
-                    // entries will always contain the individual one.
-                    entries.put(dataEntry.key, new Entry(dataEntry.key, entry.getKey(), description, isDefault, value));
+                    entries.put(key, new ParameterEntry(dataEntry.key, entry.getKey(), description + "", isDefault, value));
                 } else {
                     if(!entries.containsKey(dataEntry.key)) {
                         keys.add(dataEntry.key);
@@ -113,11 +155,19 @@ public class FractalProvider {
                         boolean isDefault = fractal.data().isDefaultValue(id);
                         Object value = fractal.data().value(id);
 
-                        entries.put(dataEntry.key, new Entry(dataEntry.key, null, description, isDefault, value));
+                        entries.put(dataEntry.key, new ParameterEntry(dataEntry.key, null, description, isDefault, value));
                     }
                 }
             }
         }
+    }
+
+    public int fractalsCount() {
+        return labels.size();
+    }
+
+    public String label(int index) {
+        return labels.get(index);
     }
 
     /**
@@ -126,7 +176,7 @@ public class FractalProvider {
      * @param value null if it should be reset to default.
      */
     public void set(ParameterKey key, Object value) {
-        Entry entry = entries.get(key);
+        ParameterEntry entry = entries.get(key);
 
         if(entry == null) {
             throw new IllegalArgumentException("this should not happen - there is no such argument");
@@ -138,7 +188,7 @@ public class FractalProvider {
                 FractalExternData.Entry oldEntry = fractalEntry.getValue().data().entry(key.id);
 
                 if(oldEntry != null && !oldEntry.key.type.equals(key.type)) {
-                    throw new IllegalArgumentException("incompatible entries: " + key + oldEntry.key);
+                    throw new IllegalArgumentException("incompatible entries: new=" + key + ", old=" + oldEntry.key);
                 }
 
                 boolean somethingChanged = fractalEntry.getValue().data().setValue(key.id, value);
@@ -152,7 +202,7 @@ public class FractalProvider {
         } else {
             Fractal fractal = fractals.get(entry.owner);
 
-            boolean somethingChanged = fractal.data().setValue(key.id, value);
+            boolean somethingChanged = fractal.data().setValue(entry.key.id, value);
 
             if(somethingChanged) {
                 fireFractalChanged(entry.owner);
@@ -231,20 +281,30 @@ public class FractalProvider {
         void fractalModified(Fractal fractal);
     }
 
+    public static class ParameterEntry {
+        public final ParameterKey key;
+        public final String owner; // for indiviuals only, otherwise null.
+        public final String description;
+        public final boolean isDefault;
+        public final Object value;
 
-    private static class Entry {
-        final ParameterKey key;
-        final String owner; // for indiviuals only, otherwise null.
-        final String description;
-        final boolean isDefault;
-        final Object value;
-
-        private Entry(ParameterKey key, String owner, String description, boolean isDefault, Object value) {
+        private ParameterEntry(ParameterKey key, String owner, String description, boolean isDefault, Object value) {
             this.key = key;
             this.owner = owner;
             this.description = description;
             this.isDefault = isDefault;
             this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return "ParameterEntry{" +
+                    "key=" + key +
+                    ", owner='" + owner + '\'' +
+                    ", description='" + description + '\'' +
+                    ", isDefault=" + isDefault +
+                    ", value=" + value +
+                    '}';
         }
     }
 }

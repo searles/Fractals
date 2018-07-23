@@ -1,10 +1,6 @@
 package at.searles.fractal;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 import at.searles.fractal.data.ParameterKey;
 import at.searles.fractal.data.ParameterType;
@@ -17,17 +13,15 @@ import at.searles.meelan.optree.Tree;
 import at.searles.meelan.optree.inlined.ExternDeclaration;
 import at.searles.meelan.optree.inlined.FuncDeclaration;
 import at.searles.meelan.optree.inlined.Id;
+import at.searles.meelan.optree.inlined.Lambda;
 import at.searles.meelan.symbols.ExternData;
 import at.searles.meelan.values.*;
 
 public class FractalExternData implements ExternData {
 
-    private static final String TEMP_VAR = "__xy";
-
+    private static final String TEMP_VAR = "_";
     private LinkedHashMap<String, Entry> entries;
     private Parameters customValues;
-
-    private int paletteCount;
 
     public static FractalExternData fromParameters(Parameters parameters) {
         return new FractalExternData(new Parameters(parameters));
@@ -64,7 +58,6 @@ public class FractalExternData implements ExternData {
     @Override
     public void clearIds() {
         entries.clear();
-        paletteCount = 0;
     }
 
     @Override
@@ -116,14 +109,11 @@ public class FractalExternData implements ExternData {
 
     @Override
     public Tree internalValue(String id) {
-        Entry entry = entries.get(id);
+        Entry entry = entryOrAddDefault(id);
+        return createTreeFrom(entry, value(id));
+    }
 
-        if(entry == null) {
-            return null;
-        }
-
-        Object value = value(id);
-
+    private Tree createTreeFrom(Entry entry, Object value) {
         switch (entry.key.type) {
             case Int:
                 return new Int(((Number) value).intValue());
@@ -139,8 +129,7 @@ public class FractalExternData implements ExternData {
                 // This may throw a MeelanException!
                 return ParserInstance.get().parseExpr((String) value);
             case Palette:
-                // first occurrence of this palette.
-                return registerPalette(entry.key.id);
+                return paletteLambda(entry.key.id);
             case Scale:
                 // first occurrence of this palette.
                 return registerScale(entry.key.id);
@@ -149,9 +138,32 @@ public class FractalExternData implements ExternData {
         throw new IllegalArgumentException("missing case: " + entry.key.type);
     }
 
-    private Tree registerPalette(String id) {
-        return new FuncDeclaration(id, Collections.singletonList(TEMP_VAR),
-                LdPalette.get().apply(Arrays.asList(new Int(paletteCount), new Id(TEMP_VAR))));
+    private int indexOfType(String id, ParameterType type) {
+        int count = 0;
+
+        for(Entry entry : entries.values()) {
+            if(entry.key.type.equals(type)) {
+                if (entry.key.id.equals(id)) {
+                    return count;
+                }
+
+                count++;
+            }
+        }
+
+        throw new IllegalArgumentException("no such " + type + " found");
+    }
+
+    private Tree paletteLambda(String id) {
+        // 1. get index of this palette
+        // 2. return 'palette(index)
+        // 3. let currying do the rest.
+
+        int paletteIndex = indexOfType(id, ParameterType.Palette);
+
+        Tree body = LdPalette.get().apply(Arrays.asList(new Int(paletteIndex), new Id(TEMP_VAR)));
+
+        return new Lambda(Collections.singletonList(TEMP_VAR), body);
     }
 
     private Tree registerScale(String id) {
@@ -171,6 +183,25 @@ public class FractalExternData implements ExternData {
         return list;
     }
 
+    /**
+     * Creates a new entry if the one that is queried does not exist.
+     */
+    private Entry entryOrAddDefault(String id) {
+        Entry entry = entries.get(id);
+
+        if(entry == null) {
+            // add new entry
+            entry = new Entry(new ParameterKey(id, ParameterType.Expr),
+                    String.format("  (%s)", id), "0");
+            entries.put(id, entry);
+        }
+
+        return entry;
+    }
+
+    /**
+     * Returns null if it does not exist.
+     */
     public Entry entry(String id) {
         return entries.get(id);
     }

@@ -152,5 +152,8 @@ public class FractviewInstructionSet extends InstructionSet {
         this.addInstruction("newton", Newton.get());
         this.addInstruction("horner", Horner.get());
         this.addInstruction("solve", Solve.get());
+
+        // specials for fractview
+        this.addSystemInstruction(LdPalette.get());
     }
 }

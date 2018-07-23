@@ -35,7 +35,7 @@ public class ParserInstance {
         if(!stream.isEmpty()) {
             // TODO 2018-07-11: There should be some warning in this case.
             // Proposal: Throw exception with tree and catch it.
-            throw new MeelanException("not fully parsed!", tree);
+            // FIXME isEmpty is not reliable. throw new MeelanException("not fully parsed!", tree);
         }
 
         return tree;

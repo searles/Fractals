@@ -7,9 +7,6 @@ import org.junit.Test;
 
 import java.io.*;
 
-/**
- * Created by searles on 20.07.18.
- */
 public class CompileTest {
     @Test
     public void testCompileDefault() throws IOException {
@@ -31,7 +28,7 @@ public class CompileTest {
     }
 
     private void withSourceFile(String filename) throws IOException {
-        File file = new File("test/resources/Default.fv");
+        File file = new File("test/resources/" + filename);
         try(BufferedReader br = new BufferedReader(new FileReader(file))) {
             StringBuilder sb = new StringBuilder();
             String line;

@@ -1,15 +1,14 @@
 package at.searles.fractal.data;
 
+import at.searles.fractal.ParserInstance;
+import at.searles.math.Cplx;
 import at.searles.math.Scale;
 import at.searles.meelan.MeelanException;
 import at.searles.meelan.optree.Tree;
 import at.searles.meelan.optree.Vec;
-import at.searles.meelan.optree.inlined.VarDeclaration;
-import at.searles.meelan.values.Int;
-import at.searles.meelan.values.StringVal;
+import at.searles.meelan.values.*;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -83,7 +82,6 @@ public enum ParameterType {
         }
     },
     Palette("palette") {
-
         List<List<Integer>> toTable(Tree tree) {
             if(!(tree instanceof Vec)) {
                 throw new MeelanException("not a table", tree);
@@ -189,5 +187,8 @@ public enum ParameterType {
         return null;
     }
 
+    // TODO: refactor: move to FractalExternData.
     public abstract Object toValue(Tree tree);
+
 }
+
