@@ -34,19 +34,10 @@ public class JsonTest {
     }
 
     private void parseCollection() {
-        this.collection = Serializers.serializer().fromJson(json, FavoriteEntry.Collection.class);
+        this.collection = Utils.parse(json, FavoriteEntry.Collection.class);
     }
 
     private void withJsonFile(String filename) throws IOException {
-        File file = new File("test/resources/" + filename);
-        try(BufferedReader br = new BufferedReader(new FileReader(file))) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line).append('\n');
-            }
-            json = sb.toString();
-        }
+        this.json = Utils.readResourceFile(filename);
     }
-
 }

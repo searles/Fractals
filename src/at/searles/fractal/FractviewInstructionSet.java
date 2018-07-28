@@ -146,6 +146,7 @@ public class FractviewInstructionSet extends InstructionSet {
         this.addSystemInstruction(JumpRel.get());
 
         this.addInstruction("length", Length.get());
+        this.addInstruction("select", Select.get());
 
         this.addInstruction("error", RaiseError.get());
         this.addInstruction("derive", Derive.get());

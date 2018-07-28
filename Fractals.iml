@@ -8,17 +8,6 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/../Meelan-2018/out/artifacts/Meelan_jar/Meelan.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/../Meelan-2018/out/artifacts/Meelan_jar/Meelan.jar!/src" />
-        </SOURCES>
-      </library>
-    </orderEntry>
     <orderEntry type="library" name="gson-2.8.2" level="project" />
     <orderEntry type="module-library" scope="TEST">
       <library name="JUnit4">
@@ -28,6 +17,17 @@
         </CLASSES>
         <JAVADOC />
         <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../Meelan/out/artifacts/Meelan_jar/Meelan.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="jar://$MODULE_DIR$/../Meelan/out/artifacts/Meelan_jar/Meelan.jar!/src" />
+        </SOURCES>
       </library>
     </orderEntry>
   </component>

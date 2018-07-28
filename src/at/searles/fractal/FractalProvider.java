@@ -184,8 +184,7 @@ public class FractalProvider {
 
         if(entry.owner == null) {
             // try to set in all fractals
-            for(Map.Entry<String, Fractal> fractalEntry : fractals.entrySet()) {
-                FractalExternData.Entry oldEntry = fractalEntry.getValue().data().entry(key.id);
+            for(Map.Entry<String, Fractal> fractalEntry : fractals.entrySet()) {FractalExternData.Entry oldEntry = fractalEntry.getValue().data().entry(key.id);
 
                 if(oldEntry != null && !oldEntry.key.type.equals(key.type)) {
                     throw new IllegalArgumentException("incompatible entries: new=" + key + ", old=" + oldEntry.key);

@@ -166,7 +166,7 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
 
         if (element != null) {
             Scale scale = context.deserialize(element, Scale.class);
-            dataMap.add(new ParameterKey(Fractal.SCALE_KEY, ParameterType.Scale), scale);
+            dataMap.add(new ParameterKey(Fractal.SCALE_LABEL, ParameterType.Scale), scale);
         }
 
         return dataMap;

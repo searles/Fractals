@@ -35,6 +35,7 @@ public class FavoriteEntryAdapter implements JsonDeserializer<FavoriteEntry>, Js
             if (iconJson != null) {
                 String iconBase64 = iconJson.getAsString();
                 try {
+                    iconBase64 = iconBase64.replace("\n", "");
                     icon = Base64.getDecoder().decode(iconBase64);
                 } catch (Throwable e) {
                     e.printStackTrace();

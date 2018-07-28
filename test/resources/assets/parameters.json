@@ -1,0 +1,16 @@
+{
+  "Mandelbrot Set": {
+    "icon": "mandelbrot.png",
+    "description": "Function of the classic Mandelbrot Set",
+    "data": {
+      "function": {
+        "type": "expr",
+        "value": "mandelbrot(z, p)"
+      },
+      "mandelinit": {
+        "type": "expr",
+        "value": "0"
+      }
+    }
+  }
+}

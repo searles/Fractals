@@ -4,13 +4,13 @@ package at.searles.fractal;
 import java.util.List;
 
 import at.searles.fractal.data.FractalData;
+import at.searles.fractal.data.ParameterKey;
 import at.searles.fractal.data.ParameterType;
 import at.searles.fractal.data.Parameters;
 import at.searles.math.Scale;
 import at.searles.math.color.Palette;
 import at.searles.meelan.compiler.Ast;
 import at.searles.meelan.compiler.IntCode;
-import at.searles.meelan.symbols.ExternData;
 
 /*
  * When parsing, an instance of ExternData is created.
@@ -34,7 +34,8 @@ public class Fractal {
     /**
      * data contains a label Scale that contains the scale of the fractal.
      */
-    public static final String SCALE_KEY = "Scale";
+    public static final String SCALE_LABEL = "Scale";
+    public static final ParameterKey SCALE_KEY = new ParameterKey(SCALE_LABEL, ParameterType.Scale);
 
     /**
      * Scale to fall back if there is no other scale defined.
@@ -98,7 +99,7 @@ public class Fractal {
     // ======== Some convenience methods to obtain data ========
     
     public Scale scale() {
-        return (Scale) data.value(SCALE_KEY);
+        return (Scale) data.value(SCALE_LABEL);
     }
 
     /**
@@ -115,6 +116,19 @@ public class Fractal {
 
     public String sourceCode() {
         return sourceCode;
+    }
+
+    public FractalData toData() {
+        Parameters exportData = new Parameters();
+
+        for(String id : data.ids()) {
+            if(!data.isDefaultValue(id)) {
+                FractalExternData.Entry entry = data.entry(id);
+                exportData.add(entry.key, data.value(id));
+            }
+        }
+
+        return new FractalData(sourceCode, exportData);
     }
 
     public int[] code() {
