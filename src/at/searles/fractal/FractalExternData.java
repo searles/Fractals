@@ -22,6 +22,7 @@ public class FractalExternData implements ExternData {
     private static final String TEMP_VAR = "_";
     private LinkedHashMap<String, Entry> entries;
     private Parameters customValues;
+    private Map<String, ExternDeclaration> hints;
 
     public static FractalExternData fromParameters(Parameters parameters) {
         return new FractalExternData(new Parameters(parameters));
@@ -53,6 +54,11 @@ public class FractalExternData implements ExternData {
         if(oldEntry != null && !type.equals(oldEntry.key.type)) {
             throw new MeelanException("extern with same name but different type", value);
         }
+    }
+
+    @Override
+    public void addHints(Map<String, ExternDeclaration> map) {
+        this.hints = map;
     }
 
     @Override
@@ -190,7 +196,15 @@ public class FractalExternData implements ExternData {
         Entry entry = entries.get(id);
 
         if(entry == null) {
-            // add new entry
+            // add new entry, use hints.
+            ExternDeclaration hint = hints.get(id);
+
+            if(hint != null) {
+                addDefinition(hint.id, hint.type, hint.description, hint.value);
+                return entries.get(hint.id);
+            }
+
+            // otherwise add default value.
             entry = new Entry(new ParameterKey(id, ParameterType.Expr),
                     String.format("  (%s)", id), "0");
             entries.put(id, entry);
