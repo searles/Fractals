@@ -127,7 +127,6 @@ public class FractviewInstructionSet extends InstructionSet {
         this.addSystemInstruction("rgb2int", Rgb2Int.get());
         this.addSystemInstruction("rgb2lab", Rgb2Lab.get());
 
-        this.addSystemInstruction(FromPalette.get());
         this.addSystemInstruction("over", Over.get());
 
         // special
