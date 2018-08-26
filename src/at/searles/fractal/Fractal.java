@@ -4,7 +4,6 @@ package at.searles.fractal;
 import java.util.List;
 
 import at.searles.fractal.data.FractalData;
-import at.searles.fractal.data.ParameterKey;
 import at.searles.fractal.data.ParameterType;
 import at.searles.fractal.data.Parameters;
 import at.searles.math.Scale;
@@ -30,17 +29,6 @@ public class Fractal {
 
     private static final String SOURCE_LABEL = "source";
     private static final String DATA_LABEL = "data";
-
-    /**
-     * data contains a label Scale that contains the scale of the fractal.
-     */
-    public static final String SCALE_LABEL = "Scale";
-    public static final ParameterKey SCALE_KEY = new ParameterKey(SCALE_LABEL, ParameterType.Scale);
-
-    /**
-     * Scale to fall back if there is no other scale defined.
-     */ 
-    public static final Scale DEFAULT_SCALE = new Scale(2, 0, 0, 2, 0, 0);
 
     /**
      * Source code of the program.
@@ -99,7 +87,7 @@ public class Fractal {
     // ======== Some convenience methods to obtain data ========
     
     public Scale scale() {
-        return (Scale) data.value(SCALE_LABEL);
+        return (Scale) data.value(FractalExternData.SCALE_LABEL);
     }
 
     /**

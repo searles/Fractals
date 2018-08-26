@@ -1,10 +1,12 @@
 package at.searles.fractal.test;
 
 import at.searles.fractal.Fractal;
+import at.searles.fractal.FractalExternData;
 import at.searles.fractal.data.FractalData;
 import at.searles.fractal.data.ParameterKey;
 import at.searles.fractal.data.ParameterType;
 import at.searles.fractal.data.Parameters;
+import at.searles.math.Scale;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -78,5 +80,23 @@ public class FractalTest {
 
         Assert.assertNotNull(fractal.data().entry("b"));
         Assert.assertEquals("13", fractal.data().value("b"));
+    }
+
+    @Test
+    public void testFractalHasScale() {
+        Fractal fractal = Fractal.fromData("var x = 0;", new Parameters());
+        fractal.compile();
+
+        Assert.assertNotNull(fractal.data().entry(FractalExternData.SCALE_LABEL));
+    }
+
+    @Test
+    public void testOverrideDefaultScale() {
+        Fractal fractal = Fractal.fromData("extern Scale scale = [5, 0, 0, 5, 0, 0]; var x = 0;", new Parameters());
+        fractal.compile();
+
+        Scale scale = fractal.scale();
+
+        Assert.assertTrue(5. == scale.xx);
     }
 }

@@ -19,6 +19,20 @@ import at.searles.meelan.values.*;
 
 public class FractalExternData implements ExternData {
 
+    /**
+     * data contains a label Scale that contains the scale of the fractal.
+     */
+    public static final String SCALE_LABEL = "Scale";
+
+    public static final ParameterKey SCALE_KEY = new ParameterKey(SCALE_LABEL, ParameterType.Scale);
+
+    /**
+     * Scale to fall back if there is no other scale defined.
+     */
+    public static final Scale DEFAULT_SCALE = new Scale(2, 0, 0, 2, 0, 0);
+
+    private static final String SCALE_DESCRIPTION = "Scale";
+
     private static final String TEMP_VAR = "_";
     private LinkedHashMap<String, Entry> entries;
     private Parameters customValues;
@@ -64,6 +78,13 @@ public class FractalExternData implements ExternData {
     @Override
     public void clearIds() {
         entries.clear();
+
+        // always contains default scale
+        addDefaultScale();
+    }
+
+    private void addDefaultScale() {
+        entries.put(SCALE_LABEL, new Entry(SCALE_KEY, SCALE_DESCRIPTION, DEFAULT_SCALE));
     }
 
     @Override

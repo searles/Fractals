@@ -1,5 +1,6 @@
 package at.searles.fractal.gson.adapters;
 
+import at.searles.fractal.FractalExternData;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -166,7 +167,7 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
 
         if (element != null) {
             Scale scale = context.deserialize(element, Scale.class);
-            dataMap.add(new ParameterKey(Fractal.SCALE_LABEL, ParameterType.Scale), scale);
+            dataMap.add(new ParameterKey(FractalExternData.SCALE_LABEL, ParameterType.Scale), scale);
         }
 
         return dataMap;
