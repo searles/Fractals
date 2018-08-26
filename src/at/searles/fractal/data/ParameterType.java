@@ -3,6 +3,7 @@ package at.searles.fractal.data;
 import at.searles.fractal.ParserInstance;
 import at.searles.math.Cplx;
 import at.searles.math.Scale;
+import at.searles.math.color.Palette;
 import at.searles.meelan.MeelanException;
 import at.searles.meelan.optree.Tree;
 import at.searles.meelan.optree.Vec;
@@ -139,11 +140,42 @@ public enum ParameterType {
 
         @Override
         public Object toValue(Tree tree) {
+            List<List<Integer>> table;
+
             if(tree instanceof at.searles.meelan.values.Int) {
-                Collections.singletonList(Collections.singletonList(((at.searles.meelan.values.Int) tree).value()));
+                table = Collections.singletonList(Collections.singletonList(((at.searles.meelan.values.Int) tree).value()));
+            } else {
+                table = toTable(tree);
             }
 
-            return toTable(tree);
+            int height = table.size();
+
+            if(height == 0) {
+                return new Palette(1, 1, new int[]{0xff000000});
+            }
+
+            int width = 1;
+
+            for(List<Integer> row : table) {
+                width = Math.max(row.size(), width);
+            }
+
+            int colors[] = new int[height * width];
+
+            int y = 0;
+
+            for(List<Integer> row : table) {
+                // if row is empty, use black.
+                for(int x = 0; x < width; ++x) {
+                    int color = row.size() > 0 ? row.get(x % row.size()) : 0xff000000;
+
+                    colors[y * width + x] = color;
+                }
+
+                y++;
+            }
+
+            return new Palette(width, height, colors);
         }
     },
     Scale("scale") {
