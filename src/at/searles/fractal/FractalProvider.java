@@ -184,7 +184,8 @@ public class FractalProvider {
 
         if(entry.owner == null) {
             // try to set in all fractals
-            for(Map.Entry<String, Fractal> fractalEntry : fractals.entrySet()) {FractalExternData.Entry oldEntry = fractalEntry.getValue().data().entry(key.id);
+            for(Map.Entry<String, Fractal> fractalEntry : fractals.entrySet()) {
+                FractalExternData.Entry oldEntry = fractalEntry.getValue().data().entry(key.id);
 
                 if(oldEntry != null && !oldEntry.key.type.equals(key.type)) {
                     throw new IllegalArgumentException("incompatible entries: new=" + key + ", old=" + oldEntry.key);
@@ -193,7 +194,7 @@ public class FractalProvider {
                 boolean somethingChanged = fractalEntry.getValue().data().setValue(key.id, value);
 
                 if(somethingChanged) {
-                    fireFractalChanged(fractalEntry.getKey());
+                    handleFractalChanged(fractalEntry.getKey());
                 }
             }
 
@@ -204,7 +205,7 @@ public class FractalProvider {
             boolean somethingChanged = fractal.data().setValue(entry.key.id, value);
 
             if(somethingChanged) {
-                fireFractalChanged(entry.owner);
+                handleFractalChanged(entry.owner);
             }
         }
     }
@@ -241,7 +242,7 @@ public class FractalProvider {
         return id + SEPARATOR + label;
     }
 
-    private void fireFractalChanged(String label) {
+    private void handleFractalChanged(String label) {
         List<Listener> listenerList = this.listeners.get(label);
 
         if(listenerList == null) {
@@ -249,6 +250,7 @@ public class FractalProvider {
         }
 
         Fractal fractal = fractals.get(label);
+        fractal.compile();
 
         for(Listener listener : listenerList) {
             listener.fractalModified(fractal);
