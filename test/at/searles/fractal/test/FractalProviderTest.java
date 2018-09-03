@@ -6,6 +6,8 @@ import at.searles.fractal.data.FractalData;
 import at.searles.fractal.data.ParameterKey;
 import at.searles.fractal.data.ParameterType;
 import at.searles.fractal.data.Parameters;
+import at.searles.math.Scale;
+import at.searles.meelan.MeelanException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,6 +57,51 @@ public class FractalProviderTest {
         Assert.assertNull(p.getParameter(3).owner);
     }
 
+    @Test
+    public void testExternExpr() {
+        FractalData fd1 = new FractalData("extern a expr = \"0\"; var d = a", new Parameters());
+
+        FractalProvider p = FractalProvider.singleFractal(fd1);
+
+        Assert.assertEquals("0", p.getParameter(1).value);
+    }
+
+    @Test
+    public void testExternExprNonDefault() {
+        FractalData fd1 = new FractalData("extern a expr = \"0\"; var d = a", new Parameters());
+
+        FractalProvider p = FractalProvider.singleFractal(fd1);
+
+        p.set(new ParameterKey("a", ParameterType.Expr), "1");
+
+        // 0 is scale
+        Assert.assertEquals("1", p.getParameter(1).value);
+    }
+
+    @Test
+    public void testSetScale() {
+        FractalData fd1 = new FractalData("var a = 0", new Parameters());
+
+        FractalProvider p = FractalProvider.singleFractal(fd1);
+        Fractal fractal = p.get(p.label(0));
+
+        p.set(new ParameterKey("Scale", ParameterType.Scale), Scale.createScaled(2));
+        fractal.compile();
+    }
+
+    @Test
+    public void testExternExprParsingError() {
+        FractalData fd1 = new FractalData("extern a expr = \"0\"; var d = a", new Parameters());
+
+        FractalProvider p = FractalProvider.singleFractal(fd1);
+
+        try {
+            p.set(new ParameterKey("a", ParameterType.Expr), "+1");
+            Assert.fail();
+        } catch(MeelanException e) {
+            e.printStackTrace();
+        }
+    }
 
     @Test
     public void testListeners() {

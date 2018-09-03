@@ -179,6 +179,7 @@ public class FractalProvider {
         ParameterEntry entry = entries.get(key);
 
         if(entry == null) {
+            // Did not exist
             throw new IllegalArgumentException("this should not happen - there is no such argument");
         }
 
@@ -245,12 +246,13 @@ public class FractalProvider {
     private void handleFractalChanged(String label) {
         List<Listener> listenerList = this.listeners.get(label);
 
+        // check fractal to catch parser errors.
+        Fractal fractal = fractals.get(label);
+        fractal.compile();
+
         if(listenerList == null) {
             return;
         }
-
-        Fractal fractal = fractals.get(label);
-        fractal.compile();
 
         for(Listener listener : listenerList) {
             listener.fractalModified(fractal);
