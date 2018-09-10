@@ -198,8 +198,6 @@ public class FractalProvider {
                     handleFractalChanged(fractalEntry.getKey());
                 }
             }
-
-            updateEntries();
         } else {
             Fractal fractal = fractals.get(entry.owner);
 
@@ -209,6 +207,8 @@ public class FractalProvider {
                 handleFractalChanged(entry.owner);
             }
         }
+
+        updateEntries();
     }
 
     /**
