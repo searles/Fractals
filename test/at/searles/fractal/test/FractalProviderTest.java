@@ -19,18 +19,21 @@ public class FractalProviderTest {
 
         FractalProvider p = FractalProvider.dualFractal(fd1, fd2, "b");
 
-        Assert.assertEquals(3, p.parameterCount());
+        Assert.assertEquals(3 + 1, p.parameterCount()); // + 1 is Scale
 
         // Individuals first
 
         Assert.assertEquals("b", p.getParameter(0).key.id);
-        Assert.assertNotNull(p.getParameter(0).owner);
+        Assert.assertNotEquals(-1, p.getParameter(0).owner);
 
         Assert.assertEquals("b", p.getParameter(1).key.id);
-        Assert.assertNotNull(p.getParameter(1).owner);
+        Assert.assertNotEquals(-1, p.getParameter(1).owner);
 
-        Assert.assertEquals("a", p.getParameter(2).key.id);
-        Assert.assertNull(p.getParameter(2).owner);
+        Assert.assertEquals("Scale", p.getParameter(2).key.id);
+        Assert.assertEquals(-1, p.getParameter(2).owner);
+
+        Assert.assertEquals("a", p.getParameter(3).key.id);
+        Assert.assertEquals(-1, p.getParameter(3).owner);
     }
 
     @Test
@@ -40,21 +43,24 @@ public class FractalProviderTest {
 
         FractalProvider p = FractalProvider.dualFractal(fd1, fd2, "b");
 
-        Assert.assertEquals(4, p.parameterCount());
+        Assert.assertEquals(4 + 1, p.parameterCount()); // + 1 is scale
 
         // Individuals first
 
         Assert.assertEquals("b", p.getParameter(0).key.id);
-        Assert.assertNotNull(p.getParameter(0).owner);
+        Assert.assertNotEquals(-1, p.getParameter(0).owner);
 
         Assert.assertEquals("b", p.getParameter(1).key.id);
-        Assert.assertNotNull(p.getParameter(1).owner);
+        Assert.assertNotEquals(-1, p.getParameter(1).owner);
 
-        Assert.assertEquals("a", p.getParameter(2).key.id);
-        Assert.assertNull(p.getParameter(2).owner);
+        Assert.assertEquals("Scale", p.getParameter(2).key.id);
+        Assert.assertEquals(-1, p.getParameter(2).owner);
 
-        Assert.assertEquals("c", p.getParameter(3).key.id);
-        Assert.assertNull(p.getParameter(3).owner);
+        Assert.assertEquals("a", p.getParameter(3).key.id);
+        Assert.assertEquals(-1, p.getParameter(3).owner);
+
+        Assert.assertEquals("c", p.getParameter(4).key.id);
+        Assert.assertEquals(-1, p.getParameter(4).owner);
     }
 
     @Test
@@ -83,7 +89,7 @@ public class FractalProviderTest {
         FractalData fd1 = new FractalData("var a = 0", new Parameters());
 
         FractalProvider p = FractalProvider.singleFractal(fd1);
-        Fractal fractal = p.get(p.label(0));
+        Fractal fractal = p.get(0);
 
         p.set(new ParameterKey("Scale", ParameterType.Scale), Scale.createScaled(2));
         fractal.compile();
@@ -117,8 +123,8 @@ public class FractalProviderTest {
 
         FractalProvider.Listener listener1 = fractal -> listenerCalled[1]++;
 
-        p.addListener(p.label(0), listener0);
-        p.addListener(p.label(1), listener1);
+        p.addListener(0, listener0);
+        p.addListener(1, listener1);
 
         // Act:
         p.set(new ParameterKey("a", ParameterType.Int), 5);
@@ -127,24 +133,24 @@ public class FractalProviderTest {
         Assert.assertEquals(1, listenerCalled[0]);
         Assert.assertEquals(1, listenerCalled[1]);
 
-        p.set(new ParameterKey("b", ParameterType.Int), p.label(0), 9);
+        p.set(new ParameterKey("b", ParameterType.Int), 0, 9);
 
         Assert.assertEquals(2, listenerCalled[0]); // individual in first.
         Assert.assertEquals(1, listenerCalled[1]);
 
         // c is only defined in fractal (1).
-        p.set(new ParameterKey("c", ParameterType.Int), p.label(0), 13);
+        p.set(new ParameterKey("c", ParameterType.Int), 0, 13);
 
         // d is not defined
         try {
-            p.set(new ParameterKey("d", ParameterType.Int), p.label(0), 404);
+            p.set(new ParameterKey("d", ParameterType.Int), 0, 404);
             Assert.fail();
         } catch (IllegalArgumentException ignore) {
         }
 
         // a is not defined with the specified type
         try {
-            p.set(new ParameterKey("a", ParameterType.Palette), p.label(0), 404);
+            p.set(new ParameterKey("a", ParameterType.Palette), 0, 404);
             Assert.fail();
         } catch (IllegalArgumentException ignore) {
         }
@@ -154,7 +160,8 @@ public class FractalProviderTest {
 
         Assert.assertEquals(9, p.getParameter(0).value); // b in [0]
         Assert.assertEquals(1, p.getParameter(1).value); // b in [1]
-        Assert.assertEquals(5, p.getParameter(2).value); // a in both
-        Assert.assertEquals(13, p.getParameter(3).value); // c in [1]
+        // 2 is scale
+        Assert.assertEquals(5, p.getParameter(3).value); // a in both
+        Assert.assertEquals(13, p.getParameter(4).value); // c in [1]
     }
 }

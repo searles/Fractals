@@ -17,12 +17,12 @@ public class FractalProvider {
      * Listeners that are informed if a fractal
      * is modified due to a changed parameter.
      */
-    private Map<String, List<Listener>> listeners;
+    private ArrayList<List<Listener>> listeners;
 
     /**
      * Key fractals. These are initialized in constructor and remain fixed.
      */
-    private final LinkedHashMap<String, Fractal> fractals;
+    private final ArrayList<Fractal> fractals;
 
     /**
      * Which parameters should not be shared?
@@ -37,58 +37,95 @@ public class FractalProvider {
     private final List<ParameterKey> keys;
     private final HashMap<ParameterKey, ParameterEntry> entries;
 
-    private final List<String> labels;
-
     /**
      * Creates a provider with only one fractal
      * @param fractalData The only fractal.
      * @return the fractal provider
      */
     public static FractalProvider singleFractal(FractalData fractalData) {
-        FractalProvider fractalProvider = new FractalProvider(Collections.emptyList());
-
         Fractal fractal = Fractal.fromData(fractalData);
         fractal.compile();
 
-        fractalProvider.fractals.put("Fractal", fractal);
-        fractalProvider.updateEntries();
+        FractalProvider provider = new FractalProvider();
+        provider.add(fractal);
 
-        return fractalProvider;
+        return provider;
     }
 
     /**
-     * This one creates a provider for two fractals. One parameter is
-     * individual, most likely a bool (eg isJuliaSet).
-     * @param fractalData1 first one
-     * @param fractalData2 second one
-     * @param individuals parameters that are not shared, eg scale and a boolean
+     * This one creates a provider for two fractals. It first creates a
+     * provider with a single fractal and then splits it using the
+     * keys of the individual parameteres.
+     * @param fractalData first one
+     * @param individuals parameters that are not shared. Most likely "Scale" and "juliaset".
      * @return the fractal provider.
      */
-    public static FractalProvider dualFractal(FractalData fractalData1, FractalData fractalData2, String...individuals) {
-        FractalProvider fractalProvider = new FractalProvider(Arrays.asList(individuals));
-
-        Fractal fractal1 = Fractal.fromData(fractalData1);
-        fractal1.compile();
-
-        Fractal fractal2 = Fractal.fromData(fractalData2);
-        fractal2.compile();
-
-        fractalProvider.fractals.put("Fractal 1", fractal1);
-        fractalProvider.fractals.put("Fractal 2", fractal2);
-
-        fractalProvider.updateEntries();
+    public static FractalProvider dualFractal(FractalData fractalData, FractalData fractalData2, String...individuals) {
+        FractalProvider fractalProvider = singleFractal(fractalData);
+        fractalProvider.split(fractalData2, individuals);
 
         return fractalProvider;
     }
 
-    private FractalProvider(Collection<String> individualParameters) {
-        this.individualParameters = new HashSet<>(individualParameters);
-        this.fractals = new LinkedHashMap<>();
-        this.listeners = new HashMap<>();
+    private FractalProvider() {
+        // individual for each fractal
+        this.fractals = new ArrayList<>();
+        this.listeners = new ArrayList<>();
+
+        // general parameters
+        this.individualParameters = new HashSet<>();
         this.keys = new ArrayList<>();
         this.entries = new LinkedHashMap<>();
+    }
 
-        this.labels = new ArrayList<>();
+    private void add(Fractal fractal) {
+        fractals.add(fractal);
+        this.listeners.add(new ArrayList<>());
+
+        updateEntries();
+    }
+
+    /**
+     * The provider can be split along of individuals. Each of them can
+     * use a unique value (that is not shared). Base of such a split
+     * must be a single provider without individuals.
+     * @return the label of the split fractal.
+     */
+    public void split(FractalData fractalData, String... individuals) {
+        if(fractalsCount() != 1 || !individualParameters.isEmpty()) {
+            throw new IllegalArgumentException("cannot split this fractal provider");
+        }
+
+        individualParameters.addAll(Arrays.asList(individuals));
+
+        // split fractal
+        Fractal splitFractal = Fractal.fromData(fractalData);
+        splitFractal.compile();
+
+        add(splitFractal);
+    }
+
+    /**
+     * Return to single-fractal mode: Remove all individuals and
+     * keep values of
+     * @param index
+     */
+    public void unsplit(int index) {
+        if(index < 0 || fractalsCount() <= index) {
+            throw new IllegalArgumentException("index out of range");
+        }
+
+        // remove others
+        individualParameters.clear();
+
+        for(int i = fractalsCount(); i >= 0; --i) {
+            if(i != index) {
+                fractals.remove(i);
+                listeners.remove(i);
+            }
+        }
+
+        updateEntries();
     }
 
     public Iterable<ParameterKey> keys() {
@@ -122,19 +159,15 @@ public class FractalProvider {
 
         keys.clear();
         entries.clear();
-        labels.clear();
 
-        for(Map.Entry<String, Fractal> entry : fractals.entrySet()) {
-            labels.add(entry.getKey());
-
-            Fractal fractal = entry.getValue();
-
+        for(int index = 0; index < fractalsCount(); ++index) {
+            Fractal fractal = fractals.get(index);
             for(String id : fractal.data().ids()) {
                 FractalExternData.Entry dataEntry = fractal.data().entry(id);
 
                 if(individualParameters.contains(id)) {
                     // individual parameters are always new.
-                    String label = annotatedId(dataEntry.key.id, entry.getKey());
+                    String label = annotatedId(dataEntry.key.id, index);
                     ParameterKey key = new ParameterKey(label, dataEntry.key.type);
 
                     keys.add(individualIndex++, key);
@@ -143,11 +176,11 @@ public class FractalProvider {
                     // annotated description.
                     // Thereby, there is an easy-to-resolve representation owner + id.
 
-                    String description = String.format("%s (%s)", dataEntry.description, entry.getKey());
+                    String description = String.format("%s (%s)", dataEntry.description, index);
                     boolean isDefault = fractal.data().isDefaultValue(id);
                     Object value = fractal.data().value(id);
 
-                    entries.put(key, new ParameterEntry(dataEntry.key, entry.getKey(), description + "", isDefault, value));
+                    entries.put(key, new ParameterEntry(dataEntry.key, index, description + "", isDefault, value));
                 } else {
                     if(!entries.containsKey(dataEntry.key)) {
                         keys.add(dataEntry.key);
@@ -155,7 +188,7 @@ public class FractalProvider {
                         boolean isDefault = fractal.data().isDefaultValue(id);
                         Object value = fractal.data().value(id);
 
-                        entries.put(dataEntry.key, new ParameterEntry(dataEntry.key, null, description, isDefault, value));
+                        entries.put(dataEntry.key, new ParameterEntry(dataEntry.key, -1, description, isDefault, value));
                     }
                 }
             }
@@ -163,11 +196,7 @@ public class FractalProvider {
     }
 
     public int fractalsCount() {
-        return labels.size();
-    }
-
-    public String label(int index) {
-        return labels.get(index);
+        return fractals.size();
     }
 
     /**
@@ -183,19 +212,21 @@ public class FractalProvider {
             throw new IllegalArgumentException("this should not happen - there is no such argument");
         }
 
-        if(entry.owner == null) {
+        if(entry.owner == -1) {
             // try to set in all fractals
-            for(Map.Entry<String, Fractal> fractalEntry : fractals.entrySet()) {
-                FractalExternData.Entry oldEntry = fractalEntry.getValue().data().entry(key.id);
+            for(int index = 0; index < fractalsCount(); ++index) {
+                Fractal fractal = fractals.get(index);
+
+                FractalExternData.Entry oldEntry = fractal.data().entry(key.id);
 
                 if(oldEntry != null && !oldEntry.key.type.equals(key.type)) {
                     throw new IllegalArgumentException("incompatible entries: new=" + key + ", old=" + oldEntry.key);
                 }
 
-                boolean somethingChanged = fractalEntry.getValue().data().setValue(key.id, value);
+                boolean somethingChanged = fractal.data().setValue(key.id, value);
 
                 if(somethingChanged) {
-                    handleFractalChanged(fractalEntry.getKey());
+                    handleFractalChanged(index);
                 }
             }
         } else {
@@ -214,15 +245,15 @@ public class FractalProvider {
     /**
      * This one is called from on-screen editors. id here
      * is not annotated. It forwards the call to the set method.
-     * @param fractalLabel is ignored if it is a non-individual parameter.
+     * @param fractalIndex is ignored if it is a non-individual parameter.
      */
-    public void set(ParameterKey key, String fractalLabel, Object value) {
+    public void set(ParameterKey key, int fractalIndex, Object value) {
         // check whether it should be set in all fractals
         if(!individualParameters.contains(key.id)) {
             set(key, value);
         } else {
             // only set in label
-            String annotatedId = annotatedId(key.id, fractalLabel);
+            String annotatedId = annotatedId(key.id, fractalIndex);
             ParameterKey annotatedKey = new ParameterKey(annotatedId, key.type);
 
             set(annotatedKey, value);
@@ -230,24 +261,21 @@ public class FractalProvider {
     }
 
     /**
-     * Get fractal. Label might be further specified, eg in a video with a frame
-     * parameter.
-     * @param label
-     * @return
+     * Get fractal with index.
      */
-    public Fractal get(String label) {
-        return fractals.get(label);
+    public Fractal get(int index) {
+        return fractals.get(index);
     }
 
-    private String annotatedId(String id, String label) {
-        return id + SEPARATOR + label;
+    private String annotatedId(String id, int index) {
+        return id + SEPARATOR + index;
     }
 
-    private void handleFractalChanged(String label) {
-        List<Listener> listenerList = this.listeners.get(label);
+    private void handleFractalChanged(int index) {
+        List<Listener> listenerList = this.listeners.get(index);
 
         // check fractal to catch parser errors.
-        Fractal fractal = fractals.get(label);
+        Fractal fractal = fractals.get(index);
         fractal.compile();
 
         if(listenerList == null) {
@@ -261,23 +289,12 @@ public class FractalProvider {
 
     // ## Methods for listener
 
-    public void addListener(String label, Listener listener) {
-        List<Listener> listenerList = this.listeners.get(label);
-
-        if(listenerList == null) {
-            listenerList = new LinkedList<>();
-            this.listeners.put(label, listenerList);
-        }
-
-        listenerList.add(listener);
+    public void addListener(int index, Listener listener) {
+        this.listeners.get(index).add(listener);
     }
 
-    public void removeListener(String label, Listener listener) {
-        List<Listener> listenerList = listeners.get(label);
-
-        if(listenerList != null) {
-            listenerList.remove(listener);
-        }
+    public boolean removeListener(int index, Listener listener) {
+        return listeners.get(index).remove(listener);
     }
     
     public static interface Listener {
@@ -286,12 +303,12 @@ public class FractalProvider {
 
     public static class ParameterEntry {
         public final ParameterKey key;
-        public final String owner; // for indiviuals only, otherwise null.
+        public final int owner; // for indiviuals only, otherwise null.
         public final String description;
         public final boolean isDefault;
         public final Object value;
 
-        private ParameterEntry(ParameterKey key, String owner, String description, boolean isDefault, Object value) {
+        private ParameterEntry(ParameterKey key, int owner, String description, boolean isDefault, Object value) {
             this.key = key;
             this.owner = owner;
             this.description = description;
