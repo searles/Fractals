@@ -17,23 +17,26 @@ public class FractalProviderTest {
         FractalData fd1 = new FractalData("extern a int = 0; extern b int = 1; var c = a + b", new Parameters());
         FractalData fd2 = new FractalData("extern a int = 0; extern b int = 1; var c = a + b", new Parameters());
 
-        FractalProvider p = FractalProvider.dualFractal(fd1, fd2, "b");
+        FractalProvider p = new FractalProvider();
+
+        p.addFractal(fd1, "b");
+        p.addFractal(fd2, "b");
 
         Assert.assertEquals(3 + 1, p.parameterCount()); // + 1 is Scale
 
         // Individuals first
 
-        Assert.assertEquals("b", p.getParameter(0).key.id);
-        Assert.assertNotEquals(-1, p.getParameter(0).owner);
+        Assert.assertEquals("b", p.getParameterByIndex(0).key);
+        Assert.assertNotEquals(-1, p.getParameterByIndex(0).owner);
 
-        Assert.assertEquals("b", p.getParameter(1).key.id);
-        Assert.assertNotEquals(-1, p.getParameter(1).owner);
+        Assert.assertEquals("b", p.getParameterByIndex(1).key);
+        Assert.assertNotEquals(-1, p.getParameterByIndex(1).owner);
 
-        Assert.assertEquals("Scale", p.getParameter(2).key.id);
-        Assert.assertEquals(-1, p.getParameter(2).owner);
+        Assert.assertEquals("Scale", p.getParameterByIndex(2).key);
+        Assert.assertEquals(-1, p.getParameterByIndex(2).owner);
 
-        Assert.assertEquals("a", p.getParameter(3).key.id);
-        Assert.assertEquals(-1, p.getParameter(3).owner);
+        Assert.assertEquals("a", p.getParameterByIndex(3).key);
+        Assert.assertEquals(-1, p.getParameterByIndex(3).owner);
     }
 
     @Test
@@ -41,57 +44,67 @@ public class FractalProviderTest {
         FractalData fd1 = new FractalData("extern a int = 0; extern b int = 1; var d = a + b", new Parameters());
         FractalData fd2 = new FractalData("extern a int = 0; extern b int = 1; extern c int = 2; var d = a + b + c", new Parameters());
 
-        FractalProvider p = FractalProvider.dualFractal(fd1, fd2, "b");
+        FractalProvider p = new FractalProvider();
+
+        p.addFractal(fd1, "b");
+        p.addFractal(fd2, "b");
 
         Assert.assertEquals(4 + 1, p.parameterCount()); // + 1 is scale
 
         // Individuals first
 
-        Assert.assertEquals("b", p.getParameter(0).key.id);
-        Assert.assertNotEquals(-1, p.getParameter(0).owner);
+        Assert.assertEquals("b", p.getParameterByIndex(0).key);
+        Assert.assertNotEquals(-1, p.getParameterByIndex(0).owner);
 
-        Assert.assertEquals("b", p.getParameter(1).key.id);
-        Assert.assertNotEquals(-1, p.getParameter(1).owner);
+        Assert.assertEquals("b", p.getParameterByIndex(1).key);
+        Assert.assertNotEquals(-1, p.getParameterByIndex(1).owner);
 
-        Assert.assertEquals("Scale", p.getParameter(2).key.id);
-        Assert.assertEquals(-1, p.getParameter(2).owner);
+        Assert.assertEquals("c", p.getParameterByIndex(2).key);
+        Assert.assertEquals(-1, p.getParameterByIndex(2).owner);
 
-        Assert.assertEquals("a", p.getParameter(3).key.id);
-        Assert.assertEquals(-1, p.getParameter(3).owner);
+        Assert.assertEquals("Scale", p.getParameterByIndex(3).key);
+        Assert.assertEquals(-1, p.getParameterByIndex(3).owner);
 
-        Assert.assertEquals("c", p.getParameter(4).key.id);
-        Assert.assertEquals(-1, p.getParameter(4).owner);
+        Assert.assertEquals("a", p.getParameterByIndex(4).key);
+        Assert.assertEquals(-1, p.getParameterByIndex(4).owner);
     }
 
     @Test
     public void testExternExpr() {
         FractalData fd1 = new FractalData("extern a expr = \"0\"; var d = a", new Parameters());
 
-        FractalProvider p = FractalProvider.singleFractal(fd1);
+        FractalProvider p = new FractalProvider();
 
-        Assert.assertEquals("0", p.getParameter(1).value);
+        p.addFractal(fd1);
+
+        Assert.assertEquals("0", p.getParameterByIndex(1).value);
     }
 
     @Test
     public void testExternExprNonDefault() {
         FractalData fd1 = new FractalData("extern a expr = \"0\"; var d = a", new Parameters());
 
-        FractalProvider p = FractalProvider.singleFractal(fd1);
+        FractalProvider p = new FractalProvider();
 
-        p.set(new ParameterKey("a", ParameterType.Expr), "1");
+        p.addFractal(fd1);
+
+        p.setParameter("a", -1, "1");
 
         // 0 is scale
-        Assert.assertEquals("1", p.getParameter(1).value);
+        Assert.assertEquals("1", p.getParameterByIndex(1).value);
     }
 
     @Test
     public void testSetScale() {
         FractalData fd1 = new FractalData("var a = 0", new Parameters());
 
-        FractalProvider p = FractalProvider.singleFractal(fd1);
-        Fractal fractal = p.get(0);
+        FractalProvider p = new FractalProvider();
 
-        p.set(new ParameterKey("Scale", ParameterType.Scale), Scale.createScaled(2));
+        p.addFractal(fd1);
+
+        Fractal fractal = p.getFractal(0);
+
+        p.setParameter("Scale", -1, Scale.createScaled(2));
         fractal.compile();
     }
 
@@ -99,10 +112,12 @@ public class FractalProviderTest {
     public void testExternExprParsingError() {
         FractalData fd1 = new FractalData("extern a expr = \"0\"; var d = a", new Parameters());
 
-        FractalProvider p = FractalProvider.singleFractal(fd1);
+        FractalProvider p = new FractalProvider();
+
+        p.addFractal(fd1);
 
         try {
-            p.set(new ParameterKey("a", ParameterType.Expr), "+1");
+            p.setParameter("a", -1, "+1");
             Assert.fail();
         } catch(MeelanException e) {
             e.printStackTrace();
@@ -115,7 +130,10 @@ public class FractalProviderTest {
         FractalData fd1 = new FractalData("extern a int = 0; extern b int = 1; var d = a + b", new Parameters());
         FractalData fd2 = new FractalData("extern a int = 0; extern b int = 1; extern c int = 2; var d = a + b + c", new Parameters());
 
-        FractalProvider p = FractalProvider.dualFractal(fd1, fd2, "b");
+        FractalProvider p = new FractalProvider();
+
+        p.addFractal(fd1, "b");
+        p.addFractal(fd2, "b");
 
         int listenerCalled[] = new int[]{0, 0};
 
@@ -127,41 +145,31 @@ public class FractalProviderTest {
         p.addListener(1, listener1);
 
         // Act:
-        p.set(new ParameterKey("a", ParameterType.Int), 5);
+        p.setParameter("a", -1, 5);
 
         // Should have been modified in both
         Assert.assertEquals(1, listenerCalled[0]);
         Assert.assertEquals(1, listenerCalled[1]);
 
-        p.set(new ParameterKey("b", ParameterType.Int), 0, 9);
+        p.setParameter("b", 0, 9);
 
         Assert.assertEquals(2, listenerCalled[0]); // individual in first.
         Assert.assertEquals(1, listenerCalled[1]);
 
         // c is only defined in fractal (1).
-        p.set(new ParameterKey("c", ParameterType.Int), 0, 13);
+        p.setParameter("c", 0, 13);
 
         // d is not defined
-        try {
-            p.set(new ParameterKey("d", ParameterType.Int), 0, 404);
-            Assert.fail();
-        } catch (IllegalArgumentException ignore) {
-        }
-
-        // a is not defined with the specified type
-        try {
-            p.set(new ParameterKey("a", ParameterType.Palette), 0, 404);
-            Assert.fail();
-        } catch (IllegalArgumentException ignore) {
-        }
+        p.setParameter("d", 0, 404);
 
         Assert.assertEquals(2, listenerCalled[0]); // individual in first.
         Assert.assertEquals(2, listenerCalled[1]);
 
-        Assert.assertEquals(9, p.getParameter(0).value); // b in [0]
-        Assert.assertEquals(1, p.getParameter(1).value); // b in [1]
+        Assert.assertEquals(9, p.getParameterByIndex(0).value); // b in [0]
+        Assert.assertEquals(1, p.getParameterByIndex(1).value); // b in [1]
+
+        Assert.assertEquals(13, p.getParameterByIndex(2).value); // c in [1]
         // 2 is scale
-        Assert.assertEquals(5, p.getParameter(3).value); // a in both
-        Assert.assertEquals(13, p.getParameter(4).value); // c in [1]
+        Assert.assertEquals(5, p.getParameterByIndex(4).value); // a in both
     }
 }

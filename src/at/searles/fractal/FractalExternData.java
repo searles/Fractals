@@ -118,6 +118,11 @@ public class FractalExternData implements ExternData {
     @Override
     public Object value(String id) {
         Entry entry = entries.get(id);
+
+        if(entry == null) {
+            return null;
+        }
+
         Object value = customValues.get(entry.key);
 
         return value != null ? value : entry.defaultValue;
@@ -239,6 +244,14 @@ public class FractalExternData implements ExternData {
      */
     public Entry entry(String id) {
         return entries.get(id);
+    }
+
+    public ParameterType type(String id) {
+        return entries.get(id).key.type;
+    }
+
+    public String description(String id) {
+        return entries.get(id).description;
     }
 
     public static class Entry {
