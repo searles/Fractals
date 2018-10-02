@@ -12,6 +12,7 @@ import java.util.*;
 public class FractalProvider {
 
     private final ArrayList<FractalEntry> fractalEntries;
+    private final ArrayList<ParameterMapListener> parameterMapListeners;
 
     private final ArrayList<ParameterEntry> parameterOrder;
     private final TreeMap<AnnotatedKey, ParameterEntry> parameters;
@@ -20,6 +21,7 @@ public class FractalProvider {
         this.fractalEntries = new ArrayList<>(2);
         this.parameters = new TreeMap<>();
         parameterOrder = new ArrayList<>(); // must call updateModel once.
+        parameterMapListeners = new ArrayList<>(2);
     }
 
     /**
@@ -113,12 +115,20 @@ public class FractalProvider {
         updateParameterMap();
     }
 
-    public void addListener(int index, Listener l) {
+    public void addFractalListener(int index, FractalListener l) {
         fractalEntries.get(index).listeners.add(l);
     }
 
-    public boolean removeListener(int index, Listener l) {
+    public boolean removeFractalListener(int index, FractalListener l) {
         return fractalEntries.get(index).listeners.remove(l);
+    }
+
+    public void addParameterMapListener(ParameterMapListener l) {
+        parameterMapListeners.add(l);
+    }
+
+    public boolean removeParameterMapListener(ParameterMapListener l) {
+        return parameterMapListeners.remove(l);
     }
 
     private void updateParameterMap() {
@@ -195,6 +205,10 @@ public class FractalProvider {
 
         // finally all global ones that occur in all fractals.
         parameterOrder.addAll(globalUniversalEntries);
+
+        for(ParameterMapListener l : parameterMapListeners) {
+            l.parameterMapModified(this);
+        }
     }
 
     private void handleFractalChanged(int index) {
@@ -203,7 +217,7 @@ public class FractalProvider {
         // check fractal to catch parser errors.
         fractalEntry.fractal.compile();
 
-        for(Listener listener : fractalEntry.listeners) {
+        for(FractalListener listener : fractalEntry.listeners) {
             listener.fractalModified(fractalEntry.fractal);
         }
     }
@@ -261,7 +275,7 @@ public class FractalProvider {
 
     private class FractalEntry {
         final Fractal fractal;
-        final LinkedList<Listener> listeners;
+        final LinkedList<FractalListener> listeners;
         final TreeSet<String> exclusiveParameters;
 
         private FractalEntry(Fractal fractal, String...exclusiveParameters) {
@@ -272,8 +286,12 @@ public class FractalProvider {
     }
 
 
-    public static interface Listener {
+    public interface FractalListener {
         void fractalModified(Fractal fractal);
+    }
+
+    public interface ParameterMapListener {
+        void parameterMapModified(FractalProvider src);
     }
 
 //
@@ -596,7 +614,7 @@ public class FractalProvider {
 //
 //    // ## Methods for listener
 //
-//    public void addListener(int index, Listener listener) {
+//    public void addFractalListener(int index, Listener listener) {
 //        this.listeners.get(index).add(listener);
 //    }
 //

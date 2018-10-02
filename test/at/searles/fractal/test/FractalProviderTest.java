@@ -3,8 +3,6 @@ package at.searles.fractal.test;
 import at.searles.fractal.Fractal;
 import at.searles.fractal.FractalProvider;
 import at.searles.fractal.data.FractalData;
-import at.searles.fractal.data.ParameterKey;
-import at.searles.fractal.data.ParameterType;
 import at.searles.fractal.data.Parameters;
 import at.searles.math.Scale;
 import at.searles.meelan.MeelanException;
@@ -137,12 +135,12 @@ public class FractalProviderTest {
 
         int listenerCalled[] = new int[]{0, 0};
 
-        FractalProvider.Listener listener0 = fractal -> listenerCalled[0]++;
+        FractalProvider.FractalListener listener0 = fractal -> listenerCalled[0]++;
 
-        FractalProvider.Listener listener1 = fractal -> listenerCalled[1]++;
+        FractalProvider.FractalListener listener1 = fractal -> listenerCalled[1]++;
 
-        p.addListener(0, listener0);
-        p.addListener(1, listener1);
+        p.addFractalListener(0, listener0);
+        p.addFractalListener(1, listener1);
 
         // Act:
         p.setParameter("a", -1, 5);
