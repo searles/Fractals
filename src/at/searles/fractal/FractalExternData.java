@@ -7,11 +7,9 @@ import at.searles.fractal.data.ParameterType;
 import at.searles.fractal.data.Parameters;
 import at.searles.math.Cplx;
 import at.searles.math.Scale;
-import at.searles.math.color.Palette;
 import at.searles.meelan.MeelanException;
 import at.searles.meelan.optree.Tree;
 import at.searles.meelan.optree.inlined.ExternDeclaration;
-import at.searles.meelan.optree.inlined.FuncDeclaration;
 import at.searles.meelan.optree.inlined.Id;
 import at.searles.meelan.optree.inlined.Lambda;
 import at.searles.meelan.symbols.ExternData;
@@ -23,15 +21,13 @@ public class FractalExternData implements ExternData {
      * data contains a label Scale that contains the scale of the fractal.
      */
     public static final String SCALE_LABEL = "Scale";
-
     public static final ParameterKey SCALE_KEY = new ParameterKey(SCALE_LABEL, ParameterType.Scale);
-
-    /**
-     * Scale to fall back if there is no other scale defined.
-     */
     public static final Scale DEFAULT_SCALE = new Scale(2, 0, 0, 2, 0, 0);
-
     private static final String SCALE_DESCRIPTION = "Scale";
+
+    public static final String SOURCE_LABEL = "Source";
+    public static final ParameterKey SOURCE_KEY = new ParameterKey(SOURCE_LABEL, ParameterType.Source);
+    private static final String SOURCE_DESCRIPTION = "Source Code";
 
     private static final String TEMP_VAR = "_";
     private LinkedHashMap<String, Entry> entries;
@@ -79,12 +75,17 @@ public class FractalExternData implements ExternData {
     public void clearIds() {
         entries.clear();
 
-        // always contains default scale
-        addDefaultScale();
+        // always contains default scale and current source code.
+        addGlobalDefaults();
     }
 
-    private void addDefaultScale() {
+    private void addGlobalDefaults() {
+        // source must be injected into editor.
+        entries.put(SOURCE_LABEL, new Entry(SOURCE_KEY, SOURCE_DESCRIPTION, ""));
+
         entries.put(SCALE_LABEL, new Entry(SCALE_KEY, SCALE_DESCRIPTION, DEFAULT_SCALE));
+
+        // FIXME This one must have a link to the used source code.
     }
 
     @Override

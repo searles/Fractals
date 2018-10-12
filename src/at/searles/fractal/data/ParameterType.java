@@ -201,6 +201,11 @@ public enum ParameterType {
             // TODO: create other constructor
             return new Scale(values[0], values[1], values[2], values[3], values[4], values[5]);
         }
+    }, Source("source") {
+        @Override
+        public Object toValue(Tree tree) {
+            throw new MeelanException("Cannot use source inside of program. Use expr instead.", tree);
+        }
     };
 
     public final String identifier;

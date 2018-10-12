@@ -1,6 +1,7 @@
 package at.searles.fractal;
 
 
+import java.lang.reflect.Parameter;
 import java.util.List;
 
 import at.searles.fractal.data.FractalData;
@@ -33,13 +34,13 @@ public class Fractal {
     /**
      * Source code of the program.
      */
-    private final String sourceCode;
+    private String sourceCode;
 
     /**
      * Default data in the order in which they are added.
-     * This map is created when the source code is parsed.
+     * This map is (re-)initialized when the ast is traversed.
      */
-    private final FractalExternData data;
+    private FractalExternData data;
 
     /**
      * Abstract Syntax Tree
@@ -73,6 +74,13 @@ public class Fractal {
         this.sourceCode = sourceCode;
         this.ast = ast;
         this.data = parameters;
+    }
+
+    public void setSource(String source) {
+        Ast ast = ParserInstance.get().parseSource(source);
+
+        this.sourceCode = source;
+        this.ast = ast;
     }
 
     public void compile() {

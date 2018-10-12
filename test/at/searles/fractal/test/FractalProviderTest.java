@@ -20,7 +20,7 @@ public class FractalProviderTest {
         p.addFractal(fd1, "b");
         p.addFractal(fd2, "b");
 
-        Assert.assertEquals(3 + 1, p.parameterCount()); // + 1 is Scale
+        Assert.assertEquals(3 + 2, p.parameterCount()); // + 2 is Scale/Source
 
         // Individuals first
 
@@ -30,11 +30,14 @@ public class FractalProviderTest {
         Assert.assertEquals("b", p.getParameterByIndex(1).key);
         Assert.assertNotEquals(-1, p.getParameterByIndex(1).owner);
 
-        Assert.assertEquals("Scale", p.getParameterByIndex(2).key);
+        Assert.assertEquals("Source", p.getParameterByIndex(2).key);
         Assert.assertEquals(-1, p.getParameterByIndex(2).owner);
 
-        Assert.assertEquals("a", p.getParameterByIndex(3).key);
+        Assert.assertEquals("Scale", p.getParameterByIndex(3).key);
         Assert.assertEquals(-1, p.getParameterByIndex(3).owner);
+
+        Assert.assertEquals("a", p.getParameterByIndex(4).key);
+        Assert.assertEquals(-1, p.getParameterByIndex(4).owner);
     }
 
     @Test
@@ -47,7 +50,7 @@ public class FractalProviderTest {
         p.addFractal(fd1, "b");
         p.addFractal(fd2, "b");
 
-        Assert.assertEquals(4 + 1, p.parameterCount()); // + 1 is scale
+        Assert.assertEquals(4 + 2, p.parameterCount()); // + 2 is scale/source
 
         // Individuals first
 
@@ -60,11 +63,20 @@ public class FractalProviderTest {
         Assert.assertEquals("c", p.getParameterByIndex(2).key);
         Assert.assertEquals(-1, p.getParameterByIndex(2).owner);
 
-        Assert.assertEquals("Scale", p.getParameterByIndex(3).key);
+        Assert.assertEquals("Source", p.getParameterByIndex(3).key);
         Assert.assertEquals(-1, p.getParameterByIndex(3).owner);
 
-        Assert.assertEquals("a", p.getParameterByIndex(4).key);
-        Assert.assertEquals(-1, p.getParameterByIndex(4).owner);
+        Assert.assertEquals("a", p.getParameterByIndex(5).key);
+        Assert.assertEquals(-1, p.getParameterByIndex(5).owner);
+    }
+
+    @Test
+    public void testSetSource() {
+        FractalData fd = new FractalData("extern a expr = \"0\"; var d = a", new Parameters());
+        FractalProvider p = new FractalProvider();
+        p.addFractal(fd);
+        p.setParameter("Source", -1, "extern b expr = \"1\"; var c = b");
+        Assert.assertEquals("b", p.getParameterByIndex(2).key);
     }
 
     @Test
@@ -75,7 +87,7 @@ public class FractalProviderTest {
 
         p.addFractal(fd1);
 
-        Assert.assertEquals("0", p.getParameterByIndex(1).value);
+        Assert.assertEquals("0", p.getParameterByIndex(2).value);
     }
 
     @Test
@@ -89,7 +101,7 @@ public class FractalProviderTest {
         p.setParameter("a", -1, "1");
 
         // 0 is scale
-        Assert.assertEquals("1", p.getParameterByIndex(1).value);
+        Assert.assertEquals("1", p.getParameterByIndex(2).value);
     }
 
     @Test
@@ -168,6 +180,6 @@ public class FractalProviderTest {
 
         Assert.assertEquals(13, p.getParameterByIndex(2).value); // c in [1]
         // 2 is scale
-        Assert.assertEquals(5, p.getParameterByIndex(4).value); // a in both
+        Assert.assertEquals(5, p.getParameterByIndex(5).value); // a in both
     }
 }
