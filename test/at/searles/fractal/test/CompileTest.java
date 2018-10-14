@@ -10,6 +10,16 @@ import java.io.*;
 
 public class CompileTest {
     @Test
+    public void testAdditionOfThree() throws IOException {
+        withSourceFile("assets/sources/v3/ThreeBug.fv");
+        withParameters();
+
+        actCompileFractal();
+
+        Assert.assertNotNull(fractal.code());
+    }
+
+    @Test
     public void testCompileDefault() throws IOException {
         withSourceFile("assets/sources/v3/Default.fv");
         withParameters();

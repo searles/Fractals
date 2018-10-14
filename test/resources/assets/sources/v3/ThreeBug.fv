@@ -1,0 +1,1 @@
+var x int, y int, color int; var a = #050; var b quat = int2lab a; var c quat = b + b + b; color = lab2int c
