@@ -27,6 +27,7 @@
         <JAVADOC />
         <SOURCES>
           <root url="jar://$MODULE_DIR$/../Meelan/out/artifacts/Meelan_jar/Meelan.jar!/src" />
+          <root url="file://$MODULE_DIR$/../Meelan/src" />
         </SOURCES>
       </library>
     </orderEntry>

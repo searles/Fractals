@@ -13,6 +13,8 @@ import at.searles.meelan.optree.inlined.ExternDeclaration;
 import at.searles.meelan.optree.inlined.Id;
 import at.searles.meelan.optree.inlined.Lambda;
 import at.searles.meelan.symbols.ExternData;
+import at.searles.meelan.symbols.SymTable;
+import at.searles.meelan.symbols.VarCounter;
 import at.searles.meelan.values.*;
 
 public class FractalExternData implements ExternData {
@@ -30,9 +32,11 @@ public class FractalExternData implements ExternData {
     private static final String SOURCE_DESCRIPTION = "Source Code";
 
     private static final String TEMP_VAR = "_";
+
+    private Set<String> activeEntries;
     private LinkedHashMap<String, Entry> entries;
+
     private Parameters customValues;
-    private Map<String, ExternDeclaration> hints;
 
     public static FractalExternData fromParameters(Parameters parameters) {
         return new FractalExternData(new Parameters(parameters));
@@ -44,6 +48,7 @@ public class FractalExternData implements ExternData {
 
     private FractalExternData(Parameters parameters) {
         entries = new LinkedHashMap<>();
+        activeEntries = new LinkedHashSet<>();
         customValues = parameters;
     }
 
@@ -55,7 +60,7 @@ public class FractalExternData implements ExternData {
             throw new MeelanException("Unknown type", value);
         }
 
-        Object defaultValue = convertToValue(externType, value);
+        Object defaultValue = convertAstToValue(externType, value);
 
         Entry entry = new Entry(new ParameterKey(id, type), description, defaultValue);
 
@@ -67,13 +72,9 @@ public class FractalExternData implements ExternData {
     }
 
     @Override
-    public void addHints(Map<String, ExternDeclaration> map) {
-        this.hints = map;
-    }
-
-    @Override
-    public void clearIds() {
+    public void initialize() {
         entries.clear();
+        activeEntries.clear();
 
         // always contains default scale and current source code.
         addGlobalDefaults();
@@ -82,15 +83,15 @@ public class FractalExternData implements ExternData {
     private void addGlobalDefaults() {
         // source must be injected into editor.
         entries.put(SOURCE_LABEL, new Entry(SOURCE_KEY, SOURCE_DESCRIPTION, ""));
-
         entries.put(SCALE_LABEL, new Entry(SCALE_KEY, SCALE_DESCRIPTION, DEFAULT_SCALE));
 
-        // FIXME This one must have a link to the used source code.
+        activeEntries.add(SOURCE_LABEL);
+        activeEntries.add(SCALE_LABEL);
     }
 
     @Override
     public Iterable<String> ids() {
-        return entries.keySet();
+        return activeEntries;
     }
 
     @Override
@@ -130,7 +131,8 @@ public class FractalExternData implements ExternData {
     }
 
     @Override
-    public Object convertToValue(String typeString, Tree tree) throws MeelanException {
+    public Object convertAstToValue(String typeString, Tree tree) throws MeelanException {
+        // preprocess tree to allow simple calculations
         ParameterType type = ParameterType.fromString(typeString);
 
         if(type == null) {
@@ -141,7 +143,7 @@ public class FractalExternData implements ExternData {
     }
 
     @Override
-    public Tree internalValue(String id) {
+    public Tree findAst(String id) {
         Entry entry = entryOrAddDefault(id);
         return createTreeFrom(entry, value(id));
     }
@@ -218,24 +220,19 @@ public class FractalExternData implements ExternData {
 
     /**
      * Creates a new entry if the one that is queried does not exist.
+     * Furthermore, marks entry as active.
      */
     private Entry entryOrAddDefault(String id) {
         Entry entry = entries.get(id);
 
         if(entry == null) {
-            // add new entry, use hints.
-            ExternDeclaration hint = hints.get(id);
-
-            if(hint != null) {
-                addDefinition(hint.id, hint.type, hint.description, hint.value);
-                return entries.get(hint.id);
-            }
-
             // otherwise add default value.
             entry = new Entry(new ParameterKey(id, ParameterType.Expr),
                     String.format("  (%s)", id), "0");
             entries.put(id, entry);
         }
+
+        activeEntries.add(id);
 
         return entry;
     }
@@ -260,10 +257,10 @@ public class FractalExternData implements ExternData {
         public final String description;
         public final Object defaultValue;
 
-        private Entry(ParameterKey key, String description, Object defaultValue) {
+        private Entry(ParameterKey key, String description, Object value) {
             this.key = key;
             this.description = description;
-            this.defaultValue = defaultValue;
+            this.defaultValue = value;
         }
     }
 }
