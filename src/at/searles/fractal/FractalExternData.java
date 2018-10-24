@@ -108,7 +108,7 @@ public class FractalExternData implements ExternData {
             customValues.add(entry.key, value);
         }
 
-        return entries.containsKey(id);
+        return activeEntries.contains(id);
     }
 
     @Override
