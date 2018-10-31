@@ -1,5 +1,7 @@
 package at.searles.fractal;
 
+import at.searles.math.Cplx;
+import at.searles.meelan.ops.ConstInstruction;
 import at.searles.meelan.ops.InstructionSet;
 import at.searles.meelan.ops.analysis.*;
 import at.searles.meelan.ops.arithmetics.*;
@@ -23,6 +25,8 @@ import at.searles.meelan.ops.rewriting.Newton;
 import at.searles.meelan.ops.rewriting.Solve;
 import at.searles.meelan.ops.special.*;
 import at.searles.meelan.ops.sys.*;
+import at.searles.meelan.values.CplxVal;
+import at.searles.meelan.values.Real;
 
 public class FractviewInstructionSet extends InstructionSet {
 
@@ -152,6 +156,10 @@ public class FractviewInstructionSet extends InstructionSet {
         this.addInstruction("newton", Newton.get());
         this.addInstruction("horner", Horner.get());
         this.addInstruction("solve", Solve.get());
+
+        this.addInstruction("PI", new ConstInstruction(new Real(Math.PI)));
+        this.addInstruction("E", new ConstInstruction(new Real(Math.E)));
+        this.addInstruction("I", new ConstInstruction(new CplxVal(new Cplx(0, 1))));
 
         // specials for fractview
         this.addSystemInstruction(LdPalette.get());

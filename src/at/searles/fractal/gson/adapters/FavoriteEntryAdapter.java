@@ -62,7 +62,7 @@ public class FavoriteEntryAdapter implements JsonDeserializer<FavoriteEntry>, Js
             obj.addProperty(ICON_LABEL, Base64.getEncoder().encodeToString(entry.icon));
         }
 
-        obj.add(FRACTAL_LABEL, context.serialize(entry.fractal, Fractal.class));
+        obj.add(FRACTAL_LABEL, context.serialize(entry.fractal, FractalData.class));
 
         if(entry.description != null) {
             obj.addProperty(DESCRIPTION_LABEL, entry.description);
