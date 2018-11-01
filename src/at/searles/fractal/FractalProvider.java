@@ -117,6 +117,20 @@ public class FractalProvider {
         return fractalEntries.size() - 1;
     }
 
+    public int setFractal(int index, FractalData fractalData, String...exclusiveParameters) {
+        Fractal fractal = Fractal.fromData(fractalData);
+
+        FractalEntry entry = new FractalEntry(fractal, exclusiveParameters);
+        entry.listeners.addAll(fractalEntries.get(0).listeners);
+
+        fractalEntries.set(index, entry);
+
+        handleFractalChanged(index); // FIXME because does it work for multiple ones?
+        updateParameterMap();
+
+        return index;
+    }
+
     public int fractalCount() {
         return fractalEntries.size();
     }
