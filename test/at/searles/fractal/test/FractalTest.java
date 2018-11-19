@@ -1,48 +1,54 @@
 package at.searles.fractal.test;
 
 import at.searles.fractal.Fractal;
-import at.searles.fractal.FractalExternData;
 import at.searles.fractal.data.FractalData;
-import at.searles.fractal.data.ParameterKey;
 import at.searles.fractal.data.ParameterType;
-import at.searles.fractal.data.Parameters;
 import at.searles.math.Scale;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Tests for the central fractal class
  */
 public class FractalTest {
+    static Fractal fromSource(String source) {
+        return Fractal.fromData(new FractalData(source, Collections.emptyMap()));
+    }
+
+    static Fractal fromSource(String source, String id, ParameterType type, Object value) {
+        return Fractal.fromData(new FractalData(source, Collections.singletonMap(id, new FractalData.Parameter(type, value))));
+    }
+
     @Test
     public void testFractalDefaultParameter() {
-        Fractal fractal = Fractal.fromData("extern a int = 1; var x = a;", new Parameters());
+        Fractal fractal = fromSource("extern a int = 1; var x = a;");
         fractal.compile();
-        Assert.assertTrue(fractal.data().isDefaultValue("a"));
+        Assert.assertTrue(fractal.getParameter("a").isDefault);
     }
 
     @Test
     public void testFractalNonDefaultParameter() {
-        Fractal fractal = Fractal.fromData("extern a int = 1; var x = a;", new Parameters().add(new ParameterKey("a", ParameterType.Int), 2));
+        Fractal fractal = fromSource("extern a int = 1; var x = a;", "a", ParameterType.Int, 2);
         fractal.compile();
-        Assert.assertFalse(fractal.data().isDefaultValue("a"));
+        Assert.assertFalse(fractal.getParameter("a").isDefault);
     }
 
     @Test
     public void testFractalIntCodeWithExtern() {
-        Parameters parameters = new Parameters().add(new ParameterKey("a", ParameterType.Int), 2);
-        Fractal fractal = Fractal.fromData("extern a int = 1; var x = a;", parameters);
+        Fractal fractal = fromSource("extern a int = 1; var x = a;", "a", ParameterType.Int, 2);
         fractal.compile();
         Assert.assertEquals(2, fractal.code()[1]);
     }
 
     @Test
     public void testResetParameter() {
-        Parameters parameters = new Parameters().add(new ParameterKey("a", ParameterType.Int), 2);
-        Fractal fractal = Fractal.fromData("extern a int = 1; var x = a;", parameters);
+        Fractal fractal = fromSource("extern a int = 1; var x = a;", "a", ParameterType.Int, 2);
         fractal.compile();
 
-        fractal.data().setValue("a", null);
+        fractal.setValue("a", null);
         fractal.compile();
 
         Assert.assertEquals(1, fractal.code()[1]);
@@ -50,49 +56,49 @@ public class FractalTest {
 
     @Test
     public void testAddExternParameter() {
-        Fractal fractal = Fractal.fromData("extern a expr = \"1\"; var x = a;", new Parameters());
+        Fractal fractal = fromSource("extern a expr = \"1\"; var x = a;");
         fractal.compile();
 
-        fractal.data().setValue("a", "b"); // b is now a new extern parameter.
+        fractal.setValue("a", "b"); // b is now a new extern parameter.
         fractal.compile();
 
-        Assert.assertNotNull(fractal.data().entry("b"));
+        Assert.assertNotNull(fractal.getParameter("b"));
     }
 
     @Test
     public void testKeepExternParameter() {
-        Fractal fractal = Fractal.fromData("extern a expr = \"1\"; var x = a;", new Parameters());
+        Fractal fractal = fromSource("extern a expr = \"1\"; var x = a;");
         fractal.compile();
 
-        fractal.data().setValue("a", "b"); // b is now a new extern parameter.
+        fractal.setValue("a", "b"); // b is now a new extern parameter.
         fractal.compile();
 
-        fractal.data().setValue("b", "13");
+        fractal.setValue("b", "13");
         fractal.compile();
 
-        fractal.data().setValue("a", "0");
+        fractal.setValue("a", "0");
         fractal.compile();
 
-        Assert.assertNull(fractal.data().entry("b"));
+        Assert.assertNull(fractal.getParameter("b"));
 
-        fractal.data().setValue("a", "b");
+        fractal.setValue("a", "b");
         fractal.compile();
 
-        Assert.assertNotNull(fractal.data().entry("b"));
-        Assert.assertEquals("13", fractal.data().value("b"));
+        Assert.assertNotNull(fractal.getParameter("b"));
+        Assert.assertEquals("13", fractal.value("b"));
     }
 
     @Test
     public void testFractalHasScale() {
-        Fractal fractal = Fractal.fromData("var x = 0;", new Parameters());
+        Fractal fractal = fromSource("var x = 0;");
         fractal.compile();
 
-        Assert.assertNotNull(fractal.data().entry(FractalExternData.SCALE_LABEL));
+        Assert.assertNotNull(fractal.getParameter(Fractal.SCALE_LABEL));
     }
 
     @Test
     public void testOverrideDefaultScale() {
-        Fractal fractal = Fractal.fromData("extern Scale scale = [5, 0, 0, 5, 0, 0]; var x = 0;", new Parameters());
+        Fractal fractal = fromSource("extern Scale scale = [5, 0, 0, 5, 0, 0]; var x = 0;");
         fractal.compile();
 
         Scale scale = fractal.scale();

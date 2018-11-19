@@ -1,12 +1,14 @@
 package at.searles.fractal.test;
 
 import at.searles.fractal.Fractal;
-import at.searles.fractal.data.Parameters;
+import at.searles.fractal.data.FractalData;
 import at.searles.meelan.MeelanException;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class CompileTest {
     @Test
@@ -61,10 +63,10 @@ public class CompileTest {
 
     private Fractal fractal;
     private String source;
-    private Parameters parameters;
+    private Map<String, FractalData.Parameter> parameters;
 
     private void actCompileFractal() {
-        fractal = Fractal.fromData(source, parameters);
+        fractal = Fractal.fromData(new FractalData(source, parameters));
         fractal.compile();
     }
 
@@ -73,6 +75,6 @@ public class CompileTest {
     }
 
     private void withParameters() {
-        parameters = new Parameters();
+        parameters = new HashMap<>();
     }
 }

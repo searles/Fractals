@@ -1,7 +1,6 @@
 package at.searles.fractal;
 
 import at.searles.fractal.data.FractalData;
-import at.searles.fractal.data.ParameterType;
 
 import java.util.*;
 
@@ -11,16 +10,32 @@ import java.util.*;
  */
 public class FractalProvider {
 
-    private final ArrayList<FractalEntry> fractalEntries;
+    private final ArrayList<Fractal> fractals;
     private final ArrayList<ParameterMapListener> parameterMapListeners;
 
-    private final ArrayList<ParameterEntry> parameterOrder;
-    private final TreeMap<AnnotatedKey, ParameterEntry> parameters;
+    private final ArrayList<ParameterEntry> parametersInOrder;
+
+    private final ArrayList<ParameterEntry> sortedParameters;
+    private final Comparator<ParameterEntry> cmp;
+            ;
+
+    /**
+     * Parameters that must be set for each fractal. Should be
+     * empty if this provider contains only one fractal.
+     */
+    private final TreeSet<String> exclusiveParameterIds;
 
     public FractalProvider() {
-        this.fractalEntries = new ArrayList<>(2);
-        this.parameters = new TreeMap<>();
-        parameterOrder = new ArrayList<>(); // must call updateModel once.
+        this.fractals = new ArrayList<>(2);
+
+        this.exclusiveParameterIds = new TreeSet<>();
+
+        parametersInOrder = new ArrayList<>(); // must call updateModel once.
+        sortedParameters = new ArrayList<>();
+
+        cmp = ((Comparator<ParameterEntry>) (e1, e2) -> e1.key.compareTo(e2.key))
+                .thenComparing((e1, e2) -> Integer.compare(e1.owner, e2.owner));
+
         parameterMapListeners = new ArrayList<>(2);
     }
 
@@ -28,74 +43,28 @@ public class FractalProvider {
      * Returns the parameter with the key and owner
      * @param owner -1 if there is no exclusive owner
      */
-    public ParameterEntry getParameterEntry(String key, int owner) {
-        if(owner != -1) {
-            FractalEntry fractalEntry = fractalEntries.get(owner);
-
-            if (fractalEntry.exclusiveParameters.contains(key)) {
-                // exclusive parameter
-                return parameters.get(new AnnotatedKey(key, owner));
-            }
-        }
-
-        return parameters.get(new AnnotatedKey(key, -1));
+    public ParameterEntry getParameterEntry(String id, int owner) {
+        int position = Collections.binarySearch(sortedParameters, new ParameterEntry(id, owner, null), cmp);
+        return sortedParameters.get(position);
     }
 
-    public ParameterEntry getParameterByIndex(int index) {
-        return parameterOrder.get(index);
+    public ParameterEntry getParameterEntryByIndex(int position) {
+        return parametersInOrder.get(position);
     }
 
-    /**
-     * Returns null if it does not exist.
-     */
-    public Object getParameter(String key, int owner) {
-        ParameterEntry parameterEntry = getParameterEntry(key, owner);
-
-        return parameterEntry != null ? parameterEntry.value : null;
-    }
 
     /**
      * Sets the parameter. If owner is -1 or an owner for which 'key' is non-exclusive
      * then it is changed for all fractals for which it is non-exclusive.
      */
-    public void setParameter(String key, int owner, Object value) {
-        if(owner != -1) {
-            FractalEntry fractalEntry = fractalEntries.get(owner);
-
-            if(fractalEntry.exclusiveParameters.contains(key)) {
-                // exclusive parameter
-
-                // is it the source code?
-                if(key.equals(FractalExternData.SOURCE_KEY.id)) {
-                    fractalEntry.fractal.setSource((String) value);
-                    handleFractalChanged(owner);
-                    updateParameterMap();
-                } else if(fractalEntry.fractal.data().setValue(key, value)) {
-                    handleFractalChanged(owner);
-                    updateParameterMap();
-                }
-
-                return;
-            }
-        }
-
-        // set in all parameters.
+    public void setParameterValue(String id, int owner, Object value) {
         boolean somethingChanged = false;
-
-        for(int index = 0; index < fractalEntries.size(); ++index) {
-            FractalEntry fractalEntry = fractalEntries.get(index);
-            if (!fractalEntry.exclusiveParameters.contains(key)) {
-                Fractal fractal = fractalEntry.fractal;
-
-                if(key.equals(FractalExternData.SOURCE_KEY.id)) {
-                    fractalEntry.fractal.setSource((String) value);
-                    handleFractalChanged(index);
-                    somethingChanged = true;
-                } else if(fractal.data().setValue(key, value)) {
-                    // something changed.
-                    handleFractalChanged(index);
-                    somethingChanged = true;
-                }
+        if(exclusiveParameterIds.contains(id) && owner != -1) {
+            Fractal fractal = fractals.get(owner);
+            somethingChanged = fractal.setValue(id, value);
+        } else {
+            for (Fractal fractal : fractals) {
+                somethingChanged |= fractal.setValue(id, value);
             }
         }
 
@@ -104,56 +73,46 @@ public class FractalProvider {
         }
     }
 
-    public int addFractal(FractalData fractalData, String...exclusiveParameters) {
+    public int addFractal(FractalData fractalData) {
         Fractal fractal = Fractal.fromData(fractalData);
         fractal.compile();
 
-        FractalEntry entry = new FractalEntry(fractal, exclusiveParameters);
-
-        fractalEntries.add(entry);
+        fractals.add(fractal);
 
         updateParameterMap();
 
-        return fractalEntries.size() - 1;
+        return fractals.size() - 1;
     }
 
-    public int setFractal(int index, FractalData fractalData, String...exclusiveParameters) {
-        Fractal fractal = Fractal.fromData(fractalData);
-
-        FractalEntry entry = new FractalEntry(fractal, exclusiveParameters);
-        entry.listeners.addAll(fractalEntries.get(0).listeners);
-
-        fractalEntries.set(index, entry);
-
-        handleFractalChanged(index); // FIXME because does it work for multiple ones?
-        updateParameterMap();
-
-        return index;
-    }
+//    public int setFractal(int index, FractalData fractalData, String...exclusiveParameters) {
+//        Fractal fractal = Fractal.fromData(fractalData);
+//
+//        Fractal entry = new Fractal(fractal, exclusiveParameters);
+//        entry.listeners.addAll(fractals.get(0).listeners);
+//
+//        fractals.set(index, entry);
+//
+//        handleFractalChanged(index); // FIXME because does it work for multiple ones?
+//        updateParameterMap();
+//
+//        return index;
+//    }
 
     public int fractalCount() {
-        return fractalEntries.size();
+        return fractals.size();
     }
 
     public int parameterCount() {
-        return parameterOrder.size();
+        return parametersInOrder.size();
     }
 
     public Fractal getFractal(int index) {
-        return fractalEntries.get(index).fractal;
+        return fractals.get(index);
     }
 
     public void removeFractal(int index) {
-        fractalEntries.remove(index);
+        fractals.remove(index);
         updateParameterMap();
-    }
-
-    public void addFractalListener(int index, FractalListener l) {
-        fractalEntries.get(index).listeners.add(l);
-    }
-
-    public boolean removeFractalListener(int index, FractalListener l) {
-        return fractalEntries.get(index).listeners.remove(l);
     }
 
     public void addParameterMapListener(ParameterMapListener l) {
@@ -164,163 +123,110 @@ public class FractalProvider {
         return parameterMapListeners.remove(l);
     }
 
+    public void addExclusiveParameterId(String id) {
+        if(this.exclusiveParameterIds.add(id)) {
+            updateParameterMap();
+        }
+    }
+
     private void updateParameterMap() {
-        parameters.clear();
+        parametersInOrder.clear();
 
-        LinkedHashSet<ParameterEntry> exclusiveEntries = new LinkedHashSet<>();
-        LinkedHashSet<ParameterEntry> globalEntries = new LinkedHashSet<>();
+        // for all parameters store which fractal uses it.
 
-        // the next one contains parameters that are used in all
-        // fractals.
-        LinkedHashSet<ParameterEntry> globalUniversalEntries = new LinkedHashSet<>();
+        if(fractals.isEmpty()) {
+            return;
+        }
 
-        for(int index = 0; index < fractalEntries.size(); ++index) {
-            FractalEntry fractalEntry = fractalEntries.get(index);
+        Map<String, Integer> parameterDegrees = fractals.get(0).createParameterDegrees();
+        Map<String, List<Integer>> ownersOfExclusives = new HashMap<>();
 
-            // to get a proper sorting.
-            LinkedHashSet<ParameterEntry> globalEntriesOfCurrent = new LinkedHashSet<>();
+        // initialize ownersOfExclusives and add index 0.
+        for(String id : exclusiveParameterIds) {
+            List<Integer> indices = new LinkedList<>();
 
-            for(String id : fractalEntry.fractal.data().ids()) {
+            if(parameterDegrees.containsKey(id)) {
+                indices.add(0); // is this one an individual parameter?
+            }
 
-                FractalExternData data = fractalEntry.fractal.data();
+            ownersOfExclusives.put(id, indices);
+        }
 
-                if(fractalEntry.exclusiveParameters.contains(id)) {
-                    // exclusive parameter, add index to description.
-                    ParameterEntry entry = new ParameterEntry(
-                            id, index, data.isDefaultValue(id),
-                            data.type(id), String.format("%s (%d)", data.description(id), index),
-                            data.value(id)
-                    );
+        for(int i = 1; i < fractals.size(); ++i) {
+            LinkedHashMap<String, Integer> localDegrees = fractals.get(i).createParameterDegrees();
+            parameterDegrees.putAll(localDegrees);
 
-                    parameters.put(new AnnotatedKey(id, index), entry);
-                    exclusiveEntries.add(entry);
-                } else {
-                    // non-exclusive
-                    AnnotatedKey key = new AnnotatedKey(id, -1);
-
-                    ParameterEntry entry = parameters.get(key);
-
-                    if(entry == null) {
-                        // It is the responsibility of the caller
-                        // to ensure consistency of data.
-                        entry = new ParameterEntry(
-                                id, -1, data.isDefaultValue(id),
-                                data.type(id), data.description(id),
-                                data.value(id)
-                        );
-
-                        parameters.put(key, entry);
-                        globalEntries.add(entry);
-                    }
-
-                    globalEntriesOfCurrent.add(entry);
-                } // end non-exclusive
-            } // end fractal
-
-            if(index == 0) {
-                globalUniversalEntries = globalEntriesOfCurrent;
-            } else {
-                globalUniversalEntries.retainAll(globalEntriesOfCurrent);
+            for(Map.Entry<String, List<Integer>> entry : ownersOfExclusives.entrySet()) {
+                if(localDegrees.containsKey(entry.getKey())) {
+                    entry.getValue().add(i);
+                }
             }
         }
 
-        globalEntries.removeAll(globalUniversalEntries);
+        if(parameterDegrees == null) {
+            // empty.
+            return;
+        }
 
-        // arrange order
-        parameterOrder.clear();
-        parameterOrder.ensureCapacity(exclusiveEntries.size() + globalUniversalEntries.size() + globalEntries.size());
-        // first exclusives
+        ArrayList<String> ids = new ArrayList<>(parameterDegrees.keySet());
 
-        parameterOrder.addAll(exclusiveEntries);
+        // sort ids by degree. For same degree keep order (which is order of owners).
+        // each id occurs at most once!
+        ids.sort((id1, id2) -> Integer.compare(parameterDegrees.get(id1), parameterDegrees.get(id2)));
 
-        // next those that are global but do not occur in all.
-        parameterOrder.addAll(globalEntries);
+        for(String id : ids) {
+            List<Integer> owners = ownersOfExclusives.get(id);
 
-        // finally all global ones that occur in all fractals.
-        parameterOrder.addAll(globalUniversalEntries);
+            if(owners != null) {
+                // there are owners.
+                for(Integer owner : owners) {
+                    Fractal.Parameter p = fractals.get(owner).getParameter(id);
+
+                    assert p != null;
+
+                    ParameterEntry entry = new ParameterEntry(id, owner, p);
+                    parametersInOrder.add(entry);
+                }
+            } else {
+                // no owners. Find first entry.
+                Fractal.Parameter p = null;
+                for(Fractal fractal : fractals) {
+                    p = fractal.getParameter(id);
+
+                    if(p != null) {
+                        break;
+                    }
+                }
+
+                assert p != null;
+
+                ParameterEntry entry = new ParameterEntry(id, -1, p);
+                parametersInOrder.add(entry);
+            }
+        }
+
+        // sort map.
+        sortedParameters.clear();
+        sortedParameters.addAll(parametersInOrder);
+
+        // sort by key/owner.
+        sortedParameters.sort(cmp);
 
         for(ParameterMapListener l : parameterMapListeners) {
             l.parameterMapModified(this);
         }
     }
 
-    private void handleFractalChanged(int index) {
-        FractalEntry fractalEntry = fractalEntries.get(index);
-
-        // check fractal to catch parser errors.
-        fractalEntry.fractal.compile();
-
-        for(FractalListener listener : fractalEntry.listeners) {
-            listener.fractalModified(fractalEntry.fractal);
-        }
-    }
-
-    private class AnnotatedKey implements Comparable<AnnotatedKey> {
-        final String key;
-        final int owner; // -1 if global
-
-        private AnnotatedKey(String key, int owner) {
-            this.key = key;
-            this.owner = owner;
-        }
-
-        @Override
-        public int compareTo(AnnotatedKey o) {
-            int cmp = key.compareTo(o.key);
-            return cmp != 0 ? cmp : Integer.compare(owner, o.owner);
-        }
-    }
-
     public static class ParameterEntry {
         public final String key;
         public final int owner;
+        public final Fractal.Parameter parameter;
 
-        // The next ones are NOT part of any equals-comparison!
-        public final boolean isDefault;
-        public final ParameterType type;
-        public final String description; // TODO: Add index.
-        public final Object value;
-        // End.
-
-        private ParameterEntry(String key, int owner, boolean isDefault, ParameterType type, String description, Object value) {
+        public ParameterEntry(String key, int owner, Fractal.Parameter parameter) {
             this.key = key;
             this.owner = owner;
-            this.isDefault = isDefault;
-            this.type = type;
-            this.description = description;
-            this.value = value;
+            this.parameter = parameter;
         }
-
-        public int hashCode() {
-            return key.hashCode() * 31 + owner;
-        }
-
-        public boolean equals(Object o) {
-            if(o == null || o.getClass() != ParameterEntry.class) {
-                return false;
-            }
-
-            ParameterEntry that = ((ParameterEntry) o);
-
-            return key.equals(that.key) && owner == that.owner;
-        }
-    }
-
-    private class FractalEntry {
-        final Fractal fractal;
-        final LinkedList<FractalListener> listeners;
-        final TreeSet<String> exclusiveParameters;
-
-        private FractalEntry(Fractal fractal, String...exclusiveParameters) {
-            this.fractal = fractal;
-            this.listeners = new LinkedList<>();
-            this.exclusiveParameters = new TreeSet<>(Arrays.asList(exclusiveParameters));
-        }
-    }
-
-
-    public interface FractalListener {
-        void fractalModified(Fractal fractal);
     }
 
     public interface ParameterMapListener {

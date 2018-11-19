@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.List;
 
 public enum ParameterType {
+    // XXX in the future, all types should be expr.
     Int("int") {
         @Override
         public Object toValue(Tree tree) {
@@ -22,6 +23,11 @@ public enum ParameterType {
             }
 
             throw new MeelanException("not an int", tree);
+        }
+
+        @Override
+        public Tree toTree(Object value) {
+            return new Int(((Number) value).intValue());
         }
     },
     Real("real") {
@@ -36,6 +42,11 @@ public enum ParameterType {
             }
 
             throw new MeelanException("not a real", tree);
+        }
+
+        @Override
+        public Tree toTree(Object value) {
+            return new Real(((Number) value).doubleValue());
         }
     },
     Cplx("cplx") {
@@ -55,6 +66,15 @@ public enum ParameterType {
 
             throw new MeelanException("not a cplx", tree);
         }
+
+        @Override
+        public Tree toTree(Object value) {
+            if(value instanceof Number) {
+                return new CplxVal(new Cplx(((Number) value).doubleValue()));
+            }
+
+            return new CplxVal((Cplx) value);
+        }
     },
     Bool("bool") {
         @Override
@@ -65,21 +85,37 @@ public enum ParameterType {
 
             throw new MeelanException("not a bool", tree);
         }
+
+        @Override
+        public Tree toTree(Object value) {
+            return new Bool((Boolean) value);
+        }
     },
     Expr("expr") {
         @Override
         public Object toValue(Tree tree) {
+            // returns a string
             if(tree instanceof StringVal) {
                 return ((StringVal) tree).value();
             }
 
             throw new MeelanException("not a string", tree);
         }
+
+        @Override
+        public Tree toTree(Object value) {
+            return ParserInstance.get().parseExpr((String) value);
+        }
     },
     Color("color") {
         @Override
         public Object toValue(Tree tree) {
             return Int.toValue(tree);
+        }
+
+        @Override
+        public Tree toTree(Object value) {
+            return new Int((Integer) value);
         }
     },
     Palette("palette") {
@@ -139,7 +175,7 @@ public enum ParameterType {
         }
 
         @Override
-        public Object toValue(Tree tree) {
+        public Palette toValue(Tree tree) {
             List<List<Integer>> table;
 
             if(tree instanceof at.searles.meelan.values.Int) {
@@ -177,6 +213,11 @@ public enum ParameterType {
 
             return new Palette(width, height, colors);
         }
+
+        @Override
+        public Tree toTree(Object value) {
+            throw new IllegalArgumentException("prevent this to correctly handle palettes");
+        }
     },
     Scale("scale") {
         @Override
@@ -198,13 +239,22 @@ public enum ParameterType {
                 values[index++] = (Double) Real.toValue(arg);
             }
 
-            // TODO: create other constructor
             return new Scale(values[0], values[1], values[2], values[3], values[4], values[5]);
+        }
+
+        @Override
+        public Tree toTree(Object value) {
+            throw new IllegalArgumentException("prevent this to correctly handle scales");
         }
     }, Source("source") {
         @Override
         public Object toValue(Tree tree) {
             throw new MeelanException("Cannot use source inside of program. Use expr instead.", tree);
+        }
+
+        @Override
+        public Tree toTree(Object value) {
+            throw new IllegalArgumentException("this is unexpected and clearly a bug. please report");
         }
     };
 
@@ -224,8 +274,38 @@ public enum ParameterType {
         return null;
     }
 
-    // TODO: refactor: move to FractalExternData.
     public abstract Object toValue(Tree tree);
 
+    /**
+     * This is not equivalent to the parsed tree!
+     */
+    public abstract Tree toTree(Object value);
 }
 
+/*
+    private Tree createTreeFrom(Entry entry, Object value) {
+        switch (entry.key.type) {
+            case Int:
+                return new Int(((Number) value).intValue());
+            case Real:
+                return new Real(((Number) value).doubleValue());
+            case Cplx:
+                return new CplxVal((Cplx) value);
+            case Bool:
+                return new Bool((Boolean) value);
+            case Color:
+                return new Int((Integer) value);
+            case Expr:
+                // This may throw a MeelanException!
+                return ParserInstance.get().parseExpr((String) value);
+            case Palette:
+                return paletteLambda(entry.key.id);
+            case Scale:
+                // first occurrence of this palette.
+                return registerScale(entry.key.id);
+        }
+
+        throw new IllegalArgumentException("missing case: " + entry.key.type);
+    }
+
+ */

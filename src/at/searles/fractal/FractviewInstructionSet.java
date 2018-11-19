@@ -137,8 +137,8 @@ public class FractviewInstructionSet extends InstructionSet {
         this.addSystemInstruction("distless", DistLess.get());
         this.addSystemInstruction("radless", RadLess.get());
         this.addSystemInstruction("radrange", RadRange.get());
-        this.addSystemInstruction("smooth", Smooth.get());
-        this.addSystemInstruction("smoothen", Smooth.get());
+        this.addInstruction("smooth", Smooth.get()); // deprecated
+        this.addSystemInstruction("smoothen", Smoothen.get());
         this.addSystemInstruction("mandelbrot", Mandelbrot.get());
 
         // sys

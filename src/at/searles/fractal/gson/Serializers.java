@@ -1,14 +1,11 @@
 package at.searles.fractal.gson;
 
 import at.searles.fractal.gson.adapters.*;
-import at.searles.fractal.entries.ParametersEntry;
-import at.searles.fractal.entries.SourceEntry;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import at.searles.fractal.entries.FavoriteEntry;
 import at.searles.fractal.data.FractalData;
-import at.searles.fractal.data.Parameters;
 import at.searles.math.Cplx;
 import at.searles.math.Scale;
 import at.searles.math.color.Palette;
@@ -33,19 +30,19 @@ public class Serializers {
             gsonBuilder.registerTypeAdapter(Scale.class, new ScaleAdapter());
             gsonBuilder.registerTypeAdapter(Palette.class, new PaletteAdapter());
 
-            gsonBuilder.registerTypeAdapter(Parameters.class, new ParametersAdapter());
+//            gsonBuilder.registerTypeAdapter(Parameters.class, new ParametersAdapter());
             gsonBuilder.registerTypeAdapter(FractalData.class, new FractalDataAdapter());
 
             gsonBuilder.registerTypeAdapter(FavoriteEntry.class, new FavoriteEntryAdapter());
-            gsonBuilder.registerTypeAdapter(SourceEntry.class, new SourceEntryAdapter());
-            gsonBuilder.registerTypeAdapter(ParametersEntry.class, new ParametersEntryAdapter());
+//            gsonBuilder.registerTypeAdapter(SourceEntry.class, new SourceEntryAdapter());
+//            gsonBuilder.registerTypeAdapter(ParametersEntry.class, new ParametersEntryAdapter());
 
             gsonBuilder.registerTypeAdapter(FavoriteEntry.Collection.class,
                     new CollectionAdapter<>(FavoriteEntry.class, FavoriteEntry.Collection::new));
-            gsonBuilder.registerTypeAdapter(SourceEntry.Collection.class,
-                    new CollectionAdapter<>(SourceEntry.class, SourceEntry.Collection::new));
-            gsonBuilder.registerTypeAdapter(ParametersEntry.Collection.class,
-                    new CollectionAdapter<>(ParametersEntry.class, ParametersEntry.Collection::new));
+//            gsonBuilder.registerTypeAdapter(SourceEntry.Collection.class,
+//                    new CollectionAdapter<>(SourceEntry.class, SourceEntry.Collection::new));
+//            gsonBuilder.registerTypeAdapter(ParametersEntry.Collection.class,
+//                    new CollectionAdapter<>(ParametersEntry.class, ParametersEntry.Collection::new));
 
             gsonBuilder.setLenient();
 
