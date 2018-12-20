@@ -18,7 +18,7 @@ public class FractalProviderTest {
 
         FractalProvider p = new FractalProvider();
 
-        p.addExclusiveParameterId("b");
+        p.addExclusiveParameter("b");
 
         p.addFractal(fd1);
         p.addFractal(fd2);
@@ -50,7 +50,7 @@ public class FractalProviderTest {
 
         FractalProvider p = new FractalProvider();
 
-        p.addExclusiveParameterId("b");
+        p.addExclusiveParameter("b");
 
         p.addFractal(fd1);
         p.addFractal(fd2);
@@ -118,7 +118,6 @@ public class FractalProviderTest {
         Fractal fractal = p.getFractal(0);
 
         p.setParameterValue("Scale", -1, Scale.createScaled(2));
-        fractal.compile();
     }
 
     @Test
@@ -145,7 +144,7 @@ public class FractalProviderTest {
 
         FractalProvider p = new FractalProvider();
 
-        p.addExclusiveParameterId("b");
+        p.addExclusiveParameter("b");
 
         p.addFractal(fd1);
         p.addFractal(fd2);

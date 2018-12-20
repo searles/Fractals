@@ -42,6 +42,8 @@ import at.searles.meelan.values.Real;
 
 public class Fractal {
 
+    // fixme setters package private. only access from provider
+
     public static final String SCALE_LABEL = "Scale";
     public static final Scale DEFAULT_SCALE = new Scale(2, 0, 0, 2, 0, 0);
     private static final String SCALE_DESCRIPTION = "Scale";
@@ -82,7 +84,11 @@ public class Fractal {
         // Step 1: create ast.
         Ast ast = ParserInstance.get().parseSource(data.source());
         List<ExternDeclaration> externs = ast.traverseExternData();
-        return new Fractal(data, ast, externs);
+        Fractal fractal = new Fractal(data, ast, externs);
+
+        fractal.compile();
+
+        return fractal;
     }
 
     private Fractal(FractalData data, Ast ast, List<ExternDeclaration> externs) {
@@ -109,7 +115,7 @@ public class Fractal {
         return listeners.remove(l);
     }
 
-    private void notifyListeners() {
+    private void notifyFractalModified() {
         for(Listener l : listeners) {
             l.fractalModified(this);
         }
@@ -150,7 +156,7 @@ public class Fractal {
         }
     }
 
-    public void compile() {
+    void compile() {
         // initialize data structures
         entries = new TreeMap<>();
         parameterOrder = new LinkedList<>();
@@ -207,8 +213,10 @@ public class Fractal {
 
     /**
      * This can be used to sort parameters along multiple fractals.
+     * Deprecated because too complex with too limited use
      */
-    public LinkedHashMap<String, Integer> createParameterDegrees() {
+    @Deprecated
+    LinkedHashMap<String, Integer> createParameterDegrees() {
         // Finally sort traversal order.
         // If an element in parameterOrder has no
         // corresponding entry in order, ignore it.
@@ -267,7 +275,7 @@ public class Fractal {
 
         try {
             compile();
-            notifyListeners();
+            notifyFractalModified();
         } catch (MeelanException ex) {
             // roll back
             this.data = oldData;
@@ -285,63 +293,41 @@ public class Fractal {
         }
     }
 
-
-//
-//        /**
-//         * Simple constructor
-//         */
-//    private Fractal(String sourceCode, Ast ast, FractalExternData parameters) {
-//        if(sourceCode == null || parameters == null || ast == null) {
-//            throw new NullPointerException();
-//        }
-//
-//        this.sourceCode = sourceCode;
-//        this.ast = ast;
-//        this.data = parameters;
-//    }
-//
-//    public void setSource(String source) {
-//        Ast ast = ParserInstance.get().parseSource(source);
-//
-//        this.sourceCode = source;
-//        this.ast = ast;
-//    }
-//
-//    public void compile() {
-//        IntCode code = ast.compile(FractviewInstructionSet.get(), data);
-//        this.code = code.createIntCode();
-//    }
-//
-//    public FractalExternData data() {
-//        return data;
-//    }
-//
-//    // ======== Some convenience methods to obtain data ========
-//
     public Scale scale() {
         return (Scale) getParameter(SCALE_LABEL).value;
     }
-//
-//
-//    public String sourceCode() {
-//        return sourceCode;
-//    }
-//
-//    public FractalData toData() {
-//        Parameters exportData = new Parameters();
-//
-//        for(String id : data.ids()) {
-//            if(!data.isDefaultValue(id)) {
-//                FractalExternData.Entry entry = data.entry(id);
-//                exportData.add(entry.key, data.value(id));
-//            }
-//        }
-//
-//        return new FractalData(sourceCode, exportData);
-//    }
+
+    public FractalData data() {
+        return data;
+    }
+
+    public String source() {
+        return data.source;
+    }
 
     public int[] code() {
         return code;
+    }
+
+    void setData(FractalData data) {
+        FractalData oldData = data;
+        Ast oldAst = ast;
+        List<ExternDeclaration> oldExterns = externs;
+
+        try {
+            this.data = data;
+            this.ast = ParserInstance.get().parseSource(data.source());
+            this.externs = ast.traverseExternData();
+
+            compile();
+            notifyFractalModified();
+        } catch (MeelanException ex) {
+            // roll back
+            this.data = oldData;
+            this.ast = oldAst;
+            this.externs = oldExterns;
+            throw ex; // rethrow.
+        }
     }
 
     public interface Listener {

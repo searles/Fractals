@@ -67,7 +67,6 @@ public class CompileTest {
 
     private void actCompileFractal() {
         fractal = Fractal.fromData(new FractalData(source, parameters));
-        fractal.compile();
     }
 
     private void withSourceFile(String filename) throws IOException {

@@ -24,8 +24,6 @@ public class PaletteTest {
 
         Fractal f = Fractal.fromData(new FractalData(source, Collections.emptyMap()));
 
-        f.compile();
-
         int[] code = f.code();
 
         Assert.assertNotNull(code);
