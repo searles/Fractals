@@ -1,9 +1,10 @@
 package at.searles.fractal.data;
 
+import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class FractalData {
+public class FractalData implements Iterable<String> {
 
     // FractalData contains the source code.
 
@@ -15,16 +16,25 @@ public class FractalData {
         this.parameters = parameters;
     }
 
-    public FractalData newRemoveParameter(String id) {
+    @Override
+    public Iterator<String> iterator() {
+        return parameters.keySet().iterator();
+    }
+
+    public FractalData copyResetParameter(String id) {
         TreeMap<String, Parameter> newData = new TreeMap<>(parameters);
         newData.remove(id);
         return new FractalData(source, newData);
     }
 
-    public FractalData newSetParameter(String id, ParameterType type, Object value) {
+    public FractalData copySetParameter(String id, ParameterType type, Object value) {
         TreeMap<String, Parameter> newData = new TreeMap<>(parameters);
         newData.put(id, new Parameter(type, value));
         return new FractalData(source, newData);
+    }
+
+    public FractalData copySetSource(String newSource) {
+        return new FractalData(newSource, parameters);
     }
 
     public String source() {
@@ -45,10 +55,6 @@ public class FractalData {
         Parameter parameter = parameters.get(id);
 
         return parameter != null ? parameter.value : null;
-    }
-
-    public FractalData newWithSource(String newSource) {
-        return new FractalData(newSource, parameters);
     }
 
     public static class Parameter {

@@ -13,10 +13,7 @@ public class FractalProvider {
     private final ArrayList<Fractal> fractals;
     private final ArrayList<Listener> listeners;
 
-    private final ArrayList<ParameterEntry> parametersInOrder;
-
-    private final ArrayList<ParameterEntry> sortedParameters;
-    private final Comparator<ParameterEntry> cmp;
+    private final ParameterTable parameterTable;
 
     /**
      * Parameters that must be set for each fractal. Should be
@@ -24,150 +21,39 @@ public class FractalProvider {
      */
     private final TreeSet<String> exclusiveParameterIds;
 
-    private boolean invalid = true;
-
     private int keyIndex = -1;
 
     public FractalProvider() {
         this.fractals = new ArrayList<>(2);
-
         this.exclusiveParameterIds = new TreeSet<>();
-
-        parametersInOrder = new ArrayList<>(); // must call updateModel once.
-        sortedParameters = new ArrayList<>();
-
-        cmp = ((Comparator<ParameterEntry>) (e1, e2) -> e1.key.compareTo(e2.key))
-                .thenComparing((e1, e2) -> Integer.compare(e1.owner, e2.owner));
-
         listeners = new ArrayList<>(2);
+        this.parameterTable = new ParameterTable(this);
     }
 
-    private void validate() {
-        if(invalid) {
-            invalid = false;
-
-            resetParameterMap();
-        }
-    }
-
-    private void invalidate() {
-        invalid = true;
-
+    private void fireParametersUpdated() {
+        parameterTable.invalidate();
         for(Listener l : listeners) {
             l.parameterMapUpdated(this);
         }
     }
 
-    private void resetParameterMap() {
-        // FIXME overly complicated wrt sources
-        // FIXME use key fractal if owner is -1
-
-        parametersInOrder.clear();
-
-        // for all parameters store which fractal uses it.
-
-        if(fractals.isEmpty()) {
-            return;
-        }
-
-        Map<String, Integer> parameterDegrees = fractals.get(0).createParameterDegrees();
-
-        // This map stores, which owners actually require an exclusive value.
-        Map<String, List<Integer>> ownersOfExclusives = new HashMap<>();
-
-        // initialize ownersOfExclusives and add index 0.
-        for(String id : exclusiveParameterIds) {
-            List<Integer> indices = new LinkedList<>();
-
-            if(parameterDegrees.containsKey(id)) {
-                indices.add(0); // is this one an individual parameter?
-            }
-
-            ownersOfExclusives.put(id, indices);
-        }
-
-        for(int i = 1; i < fractals.size(); ++i) {
-            LinkedHashMap<String, Integer> localDegrees = fractals.get(i).createParameterDegrees();
-            parameterDegrees.putAll(localDegrees);
-
-            for(Map.Entry<String, List<Integer>> entry : ownersOfExclusives.entrySet()) {
-                if(localDegrees.containsKey(entry.getKey())) {
-                    entry.getValue().add(i);
-                }
-            }
-        }
-
-        if(parameterDegrees == null) {
-            // empty.
-            return;
-        }
-
-        ArrayList<String> ids = new ArrayList<>(parameterDegrees.keySet());
-
-        // sort ids by degree. For same degree keep order (which is order of owners).
-        // each id occurs at most once!
-        ids.sort((id1, id2) -> Integer.compare(parameterDegrees.get(id1), parameterDegrees.get(id2)));
-
-        for(String id : ids) {
-            List<Integer> owners = ownersOfExclusives.get(id);
-
-            if(owners != null) {
-                // there are owners.
-                for(Integer owner : owners) {
-                    Fractal.Parameter p = fractals.get(owner).getParameter(id);
-
-                    assert p != null;
-
-                    ParameterEntry entry = new ParameterEntry(id, owner, p);
-                    parametersInOrder.add(entry);
-                }
-            } else {
-                // no owners. Find first entry.
-                Fractal.Parameter p = null;
-                for(Fractal fractal : fractals) {
-                    p = fractal.getParameter(id);
-
-                    if(p != null) {
-                        break;
-                    }
-                }
-
-                assert p != null;
-
-                ParameterEntry entry = new ParameterEntry(id, -1, p);
-                parametersInOrder.add(entry);
-            }
-        }
-
-        // sort map.
-        sortedParameters.clear();
-        sortedParameters.addAll(parametersInOrder);
-
-        // sort by key/owner.
-        sortedParameters.sort(cmp);
-    }
-
     public ParameterEntry getParameterEntryByIndex(int position) {
-        validate();
-        return parametersInOrder.get(position);
+        return parameterTable.get(position);
     }
 
     /**
-     * Returns the parameter with the key and owner. Must be an exact match; there
-     * is no owner-magic like in setParameterValue.
-     * @param owner -1 if there is no exclusive owner
+     * Returns the parameter with the key and owner. If it is a
+     * shared parameter, the shared visible value is returned. {@code owner}
+     * is ignored in this case. returns {@code null} if
+     * it does not exist.
      */
-    private ParameterEntry getParameterEntry(String id, int owner) {
-        validate();
-
-        if(!exclusiveParameterIds.contains(id)) {
-            owner = -1;
-        }
-
-        int position = Collections.binarySearch(sortedParameters, new ParameterEntry(id, owner, null), cmp);
-        return sortedParameters.get(position);
+    public ParameterEntry getParameterEntry(String id, int owner) {
+        return parameterTable.get(id, owner);
     }
 
+    /**
+     * Convenience; returns null if getParameterEntry returns null.
+     */
     public Object getParameterValue(String id, int owner) {
         ParameterEntry parameterEntry = getParameterEntry(id, owner);
 
@@ -175,12 +61,12 @@ public class FractalProvider {
     }
 
     /**
-     * Sets the parameter. If owner is -1 or an owner for which 'key' is non-exclusive
-     * then it is changed for all fractals for which it is non-exclusive.
+     * Sets the parameter. If parameter is shared, parameter is set in
+     * all fractals. The value is set directly in all fractals.
      */
     public void setParameterValue(String id, int owner, Object value) {
-        // FIXME check what happens when source changes
         boolean somethingChanged = false;
+
         if(exclusiveParameterIds.contains(id)) {
             Fractal fractal = fractals.get(owner);
             somethingChanged = fractal.setValue(id, value);
@@ -191,7 +77,7 @@ public class FractalProvider {
         }
 
         if(somethingChanged) {
-            invalidate();
+            fireParametersUpdated();
         }
     }
 
@@ -207,13 +93,32 @@ public class FractalProvider {
 
         fractals.add(fractal);
 
-        invalidate();
-
         if(keyIndex < 0) {
             keyIndex = 0;
         }
 
+        fireParametersUpdated();
+
         return fractals.size() - 1;
+    }
+
+    /**
+     * Removes the key fractal. The key index is set to the
+     * fractal ahead if the last fractal was removed.
+     * If this was the last fractal, then the key index is invalid (-1)
+     * @return the index of the removed fractal.
+     */
+    public int removeFractal() {
+        int removedIndex = keyIndex;
+
+        fractals.remove(keyIndex);
+
+        if(keyIndex > 0 || fractals.size() == 0) {
+            keyIndex--;
+        }
+
+        fireParametersUpdated();
+        return removedIndex;
     }
 
     public int fractalCount() {
@@ -221,8 +126,7 @@ public class FractalProvider {
     }
 
     public int parameterCount() {
-        validate();
-        return parametersInOrder.size();
+        return parameterTable.count();
     }
 
     public Fractal getFractal(int index) {
@@ -238,32 +142,12 @@ public class FractalProvider {
     }
 
     /**
-     * Removes the key fractal. The key index is set to the
-     * fractal ahead if the last fractal was removed.
-     * If this was the last fractal, then the key index is invalid (-1)
-     * @return the index of the removed fractal.
-     */
-    public int removeFractal() {
-        int removedIndex = keyIndex;
-
-        fractals.remove(keyIndex);
-
-        if(keyIndex == fractalCount()) {
-            keyIndex--;
-        }
-
-        invalidate(); // something would definitely have changed.
-
-        return removedIndex;
-    }
-
-    /**
      * Sets the data of the current key fractal.
      * @param data
      */
     public void setKeyFractal(FractalData data) {
         fractals.get(keyIndex).setData(data);
-        invalidate();
+        fireParametersUpdated();
     }
 
     public void setKeyIndex(int newKeyIndex) {
@@ -272,8 +156,7 @@ public class FractalProvider {
         }
 
         this.keyIndex = newKeyIndex;
-
-        invalidate();
+        fireParametersUpdated();
     }
 
     public int keyIndex() {
@@ -285,29 +168,29 @@ public class FractalProvider {
         return exclusiveParameterIds.iterator();
     }
 
-    public boolean isExclusiveParameter(String id) {
-        return exclusiveParameterIds.contains(id);
+    public boolean isSharedParameter(String id) {
+        return !exclusiveParameterIds.contains(id);
     }
 
     public void removeExclusiveParameter(String id) {
         if(this.exclusiveParameterIds.remove(id)) {
-            invalidate();
+            fireParametersUpdated();
         }
     }
 
     public void addExclusiveParameter(String id) {
         if(this.exclusiveParameterIds.add(id)) {
-            invalidate();
+            fireParametersUpdated();
         }
     }
 
     public static class ParameterEntry {
-        public final String key;
+        public final String id;
         public final int owner;
         public final Fractal.Parameter parameter;
 
-        ParameterEntry(String key, int owner, Fractal.Parameter parameter) {
-            this.key = key;
+        ParameterEntry(String id, int owner, Fractal.Parameter parameter) {
+            this.id = id;
             this.owner = owner;
             this.parameter = parameter;
         }

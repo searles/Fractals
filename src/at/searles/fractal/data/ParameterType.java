@@ -27,6 +27,10 @@ public enum ParameterType {
 
         @Override
         public Tree toTree(Object value) {
+            if(!(value instanceof Number)) {
+                throw new TypeCastException(this, value);
+            }
+
             return new Int(((Number) value).intValue());
         }
     },
@@ -46,6 +50,10 @@ public enum ParameterType {
 
         @Override
         public Tree toTree(Object value) {
+            if(!(value instanceof Number)) {
+                throw new TypeCastException(this, value);
+            }
+
             return new Real(((Number) value).doubleValue());
         }
     },
@@ -73,6 +81,10 @@ public enum ParameterType {
                 return new CplxVal(new Cplx(((Number) value).doubleValue()));
             }
 
+            if(!(value instanceof Cplx)) {
+                throw new TypeCastException(this, value);
+            }
+
             return new CplxVal((Cplx) value);
         }
     },
@@ -88,6 +100,10 @@ public enum ParameterType {
 
         @Override
         public Tree toTree(Object value) {
+            if(!(value instanceof Boolean)) {
+                throw new TypeCastException(this, value);
+            }
+
             return new Bool((Boolean) value);
         }
     },
@@ -104,7 +120,8 @@ public enum ParameterType {
 
         @Override
         public Tree toTree(Object value) {
-            return ParserInstance.get().parseExpr((String) value);
+            // kinda joker
+            return ParserInstance.get().parseExpr(value.toString());
         }
     },
     Color("color") {
@@ -115,6 +132,10 @@ public enum ParameterType {
 
         @Override
         public Tree toTree(Object value) {
+            if(!(value instanceof Integer)) {
+                throw new TypeCastException(this, value);
+            }
+
             return new Int((Integer) value);
         }
     },

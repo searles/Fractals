@@ -30,19 +30,12 @@ public class Serializers {
             gsonBuilder.registerTypeAdapter(Scale.class, new ScaleAdapter());
             gsonBuilder.registerTypeAdapter(Palette.class, new PaletteAdapter());
 
-//            gsonBuilder.registerTypeAdapter(Parameters.class, new ParametersAdapter());
             gsonBuilder.registerTypeAdapter(FractalData.class, new FractalDataAdapter());
 
             gsonBuilder.registerTypeAdapter(FavoriteEntry.class, new FavoriteEntryAdapter());
-//            gsonBuilder.registerTypeAdapter(SourceEntry.class, new SourceEntryAdapter());
-//            gsonBuilder.registerTypeAdapter(ParametersEntry.class, new ParametersEntryAdapter());
 
             gsonBuilder.registerTypeAdapter(FavoriteEntry.Collection.class,
                     new CollectionAdapter<>(FavoriteEntry.class, FavoriteEntry.Collection::new));
-//            gsonBuilder.registerTypeAdapter(SourceEntry.Collection.class,
-//                    new CollectionAdapter<>(SourceEntry.class, SourceEntry.Collection::new));
-//            gsonBuilder.registerTypeAdapter(ParametersEntry.Collection.class,
-//                    new CollectionAdapter<>(ParametersEntry.class, ParametersEntry.Collection::new));
 
             gsonBuilder.setLenient();
 

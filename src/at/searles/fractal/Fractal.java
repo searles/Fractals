@@ -1,12 +1,11 @@
 package at.searles.fractal;
 
 
-import java.net.InterfaceAddress;
 import java.util.*;
 
 import at.searles.fractal.data.FractalData;
 import at.searles.fractal.data.ParameterType;
-import at.searles.lexer.utils.IntervalSet;
+import at.searles.fractal.data.TypeCastException;
 import at.searles.math.Scale;
 import at.searles.math.color.Palette;
 import at.searles.meelan.MeelanException;
@@ -14,13 +13,11 @@ import at.searles.meelan.compiler.Ast;
 import at.searles.meelan.compiler.IntCode;
 import at.searles.meelan.ops.Instruction;
 import at.searles.meelan.optree.Tree;
-import at.searles.meelan.optree.Vec;
 import at.searles.meelan.optree.inlined.ExternDeclaration;
 import at.searles.meelan.optree.inlined.Id;
 import at.searles.meelan.optree.inlined.Lambda;
 import at.searles.meelan.symbols.IdResolver;
 import at.searles.meelan.values.Int;
-import at.searles.meelan.values.Real;
 
 /*
  * When parsing, an instance of ExternData is created.
@@ -51,27 +48,49 @@ public class Fractal {
     public static final String SOURCE_LABEL = "Source";
     private static final String SOURCE_DESCRIPTION = "Source Code";
 
-    private FractalData data; // source code and parameters
+    /**
+     * Pure data container
+     */
+    private FractalData data;
 
-    // the next value is generated during parsing. They are
-    // kept until the source code is modified.
+    /**
+     * Ast of the source code
+     */
     private Ast ast;
-    private List<ExternDeclaration> externs;
 
-    private TreeMap<String, Integer> order; // order; does not contain inlined ones.
-    private TreeMap<String, ExternDeclaration> decls; // declarations by id.
+    /**
+     * Extern declarations in the Ast.
+     */
+    private LinkedHashMap<String, ExternDeclaration> externDeclarations; // declarations by id.
 
+    /**
+     * Palettes in order
+     */
     private List<Palette> palettes; // updated during compilation
+
+    /**
+     * For each id that is used for a palette, store its index which
+     * correspons to the position in the list before. These data are needed
+     * later. For other non-default RS-datastructures (eg scale) the same
+     * method is required.
+     */
     private TreeMap<String, Integer> paletteIndices;
 
+    // FIXME can't scale be a matrix?
     private List<Scale> scales; // updated during compilation
     private TreeMap<String, Integer> scaleIndices; // fixme not used currently
 
-    // Data created during compilation
+    /**
+     * The resolver for ids during compilation. Used for
+     * externs
+     */
     private FractalResolver resolver;
 
-    private TreeMap<String, Parameter> entries;
-    private List<String> parameterOrder;
+    /**
+     * Used parameters. Includes implcitly defined parameters which
+     * are not in the externDeclaration.
+     */
+    private LinkedHashMap<String, Parameter> entries;
 
     // Order of parameters should be as follows:
 
@@ -80,21 +99,29 @@ public class Fractal {
 
     private List<Listener> listeners;
 
+    private static LinkedHashMap<String, ExternDeclaration> externsMap(Ast ast) {
+        List<ExternDeclaration> externs = ast.traverseExternData();
+        LinkedHashMap<String, ExternDeclaration> map = new LinkedHashMap<>();
+        for(ExternDeclaration extern: externs) {
+            map.put(extern.id, extern);
+        }
+
+        return map;
+    }
+
     public static Fractal fromData(FractalData data) {
         // Step 1: create ast.
         Ast ast = ParserInstance.get().parseSource(data.source());
-        List<ExternDeclaration> externs = ast.traverseExternData();
-        Fractal fractal = new Fractal(data, ast, externs);
 
+        Fractal fractal = new Fractal(data, ast, externsMap(ast));
         fractal.compile();
-
         return fractal;
     }
 
-    private Fractal(FractalData data, Ast ast, List<ExternDeclaration> externs) {
+    private Fractal(FractalData data, Ast ast, LinkedHashMap<String, ExternDeclaration> externDeclarations) {
         this.data = data;
         this.ast = ast;
-        this.externs = externs;
+        this.externDeclarations = externDeclarations;
 
         this.resolver = new FractalResolver();
 
@@ -127,28 +154,23 @@ public class Fractal {
      */
     private void initExternData() {
         // Initializations that only depend on Ast and ExternDeclarations.
-        this.order = new TreeMap<>();
-        this.decls = new TreeMap<>();
         this.palettes = new LinkedList<>();
         this.paletteIndices = new TreeMap<>();
-        this.scales = new LinkedList<>();
+
+        this.scales = new LinkedList<>(); // FIXME replace by matrix?
         this.scaleIndices = new TreeMap<>();
 
-        int counter = 0;
         int paletteCounter = 0;
         int scaleCounter = 0;
 
-        // also add default palettes and scales
-
-        for(ExternDeclaration extern : externs) {
-            this.order.put(extern.id, counter++);
-            this.decls.put(extern.id, extern);
-
+        for(ExternDeclaration extern : externDeclarations.values()) {
+            // Add scales
             if(ParameterType.fromString(extern.externTypeString) == ParameterType.Palette) {
                 this.paletteIndices.put(extern.id, paletteCounter++);
                 this.palettes.add((Palette) ParameterType.Palette.toValue(extern.value));
             }
 
+            // Add  declarations
             if(ParameterType.fromString(extern.externTypeString) == ParameterType.Scale) {
                 this.scaleIndices.put(extern.id, scaleCounter++);
                 this.scales.add((Scale) ParameterType.Scale.toValue(extern.value));
@@ -157,19 +179,11 @@ public class Fractal {
     }
 
     void compile() {
-        // initialize data structures
-        entries = new TreeMap<>();
-        parameterOrder = new LinkedList<>();
+        // update data structures
+        entries = new LinkedHashMap<>();
 
-        parameterOrder.add(SOURCE_LABEL);
-        parameterOrder.add(SCALE_LABEL);
-
-        // next instruction will update 'entries' and 'parameterOrder'
-        IntCode asmCode = ast.compile(FractviewInstructionSet.get(), resolver);
-        this.code = asmCode.createIntCode();
-
-        // add source and scale
         entries.put(SOURCE_LABEL, new Parameter(
+                SOURCE_LABEL,
                 SOURCE_DESCRIPTION,
                 data.source,
                 null,
@@ -177,7 +191,15 @@ public class Fractal {
                 true
         ));
 
-        // and initialize scale
+        // place holder to preserve order. It will be added afterwards
+        entries.put(SCALE_LABEL, null);
+
+
+        // next instruction will update 'entries' and 'parameterOrder'
+        IntCode asmCode = ast.compile(FractviewInstructionSet.get(), resolver);
+        this.code = asmCode.createIntCode();
+
+        // and update scale
 
         Scale customScale = (Scale) data.getValue(SCALE_LABEL);
 
@@ -185,7 +207,8 @@ public class Fractal {
 
         if(customScale != null) {
             entries.put(SCALE_LABEL, new Parameter(
-                    "Current Zoom",
+                    SCALE_LABEL,
+                    "Current Zoom", // FIXME name.
                     customScale,
                     null, // not needed because it is not implemented
                     ParameterType.Scale,
@@ -193,15 +216,17 @@ public class Fractal {
             ));
         } else {
             // either default or declared.
-            ExternDeclaration declaredScale = decls.get(SCALE_LABEL);
+            Scale scale;
 
-            Scale scale = DEFAULT_SCALE;
-
+            ExternDeclaration declaredScale = externDeclarations.get(SCALE_LABEL);
             if(declaredScale != null) {
                 scale = (Scale) ParameterType.Scale.toValue(declaredScale.value);
+            } else {
+                scale = DEFAULT_SCALE;
             }
 
             entries.put(SCALE_LABEL, new Parameter(
+                    SCALE_LABEL,
                     "Current Zoom",
                     scale,
                     null, // not needed because it is not implemented
@@ -209,34 +234,6 @@ public class Fractal {
                     false
             ));
         }
-    }
-
-    /**
-     * This can be used to sort parameters along multiple fractals.
-     * Deprecated because too complex with too limited use
-     */
-    @Deprecated
-    LinkedHashMap<String, Integer> createParameterDegrees() {
-        // Finally sort traversal order.
-        // If an element in parameterOrder has no
-        // corresponding entry in order, ignore it.
-        LinkedHashMap<String, Integer> degrees = new LinkedHashMap<>();
-
-        int lastDegree = -1;
-
-        for(String id : parameterOrder) {
-            Integer degree = order.get(id);
-
-            if(degree == null) {
-                degree = lastDegree;
-            } else {
-                lastDegree = degree;
-            }
-
-            degrees.put(id, degree);
-        }
-
-        return degrees;
     }
 
     /**
@@ -260,25 +257,32 @@ public class Fractal {
             return false;
         }
 
+        // Preserve data
         FractalData oldData = data;
 
         if(id.equals(SOURCE_LABEL)) {
             // for source we need a new ast.
-            data = data.newWithSource((String) value);
+            this.data = this.data.copySetSource((String) value);
             this.ast = ParserInstance.get().parseSource(data.source());
-            this.externs = ast.traverseExternData();
+            this.externDeclarations = externsMap(ast);
         } else if(value == null) {
-            data = data.newRemoveParameter(id);
+            data = data.copyResetParameter(id);
         } else {
-            data = data.newSetParameter(id, getParameter(id).type, value);
+            data = data.copySetParameter(id, getParameter(id).type, value);
         }
 
         try {
             compile();
             notifyFractalModified();
-        } catch (MeelanException ex) {
+        } catch (MeelanException | TypeCastException ex) {
+            // MeelanException if expr cannot be compiled
+            // TypeCastException if invalid type.
+
             // roll back
             this.data = oldData;
+            this.ast = ParserInstance.get().parseSource(data.source());
+            this.externDeclarations = externsMap(ast);
+            compile(); // it was successful before.
             throw ex; // rethrow.
         }
 
@@ -310,24 +314,31 @@ public class Fractal {
     }
 
     void setData(FractalData data) {
-        FractalData oldData = data;
-        Ast oldAst = ast;
-        List<ExternDeclaration> oldExterns = externs;
+        FractalData oldData = this.data;
 
         try {
             this.data = data;
             this.ast = ParserInstance.get().parseSource(data.source());
-            this.externs = ast.traverseExternData();
-
+            this.externDeclarations = externsMap(ast);
             compile();
             notifyFractalModified();
         } catch (MeelanException ex) {
             // roll back
             this.data = oldData;
-            this.ast = oldAst;
-            this.externs = oldExterns;
+            this.ast = ParserInstance.get().parseSource(oldData.source());
+            this.externDeclarations = externsMap(ast);
+            compile(); // it was successful before.
+
             throw ex; // rethrow.
         }
+    }
+
+    public Iterable<Fractal.Parameter> requiredParameters() {
+        return entries.values();
+    }
+
+    public Iterable<ExternDeclaration> externDeclarations() {
+        return externDeclarations.values();
     }
 
     public interface Listener {
@@ -335,13 +346,15 @@ public class Fractal {
     }
 
     public static class Parameter {
+        public final String id;
         public final String description;
         public final Object value;
         final Tree ast;
         public final ParameterType type;
         public final boolean isDefault;
 
-        private Parameter(String description, Object value, Tree ast, ParameterType type, boolean isDefault) {
+        private Parameter(String id, String description, Object value, Tree ast, ParameterType type, boolean isDefault) {
+            this.id = id;
             this.description = description;
             this.value = value;
             this.ast = ast;
@@ -398,7 +411,7 @@ public class Fractal {
                 ast = type.toTree(value);
             }
 
-            return new Parameter(decl.description, value, ast, type, isDefault);
+            return new Parameter(decl.id, decl.description, value, ast, type, isDefault);
         }
 
         Tree declaredEntry(String id) {
@@ -406,7 +419,7 @@ public class Fractal {
 
             if(entry == null) {
                 // does it exist in declarations?
-                ExternDeclaration decl = decls.get(id);
+                ExternDeclaration decl = externDeclarations.get(id);
 
                 if(decl == null) {
                     return null;
@@ -415,23 +428,33 @@ public class Fractal {
                 entry = fromDecl(decl);
 
                 entries.put(id, entry); // cache.
-                parameterOrder.add(id);
+
+                lastLabel = entry.description;
             }
 
             return entry.ast;
         }
+
+        /**
+         * Last traversed parameter. Used for description of inlined
+         * parameters.
+         */
+        private String lastLabel;
 
         private Tree inlinedEntry(String id) {
             ParameterType storedType = data.getParameterType(id); // null if not existent
 
             Parameter entry;
 
+            String label = "id (" + lastLabel + ")";
+
             if(storedType == ParameterType.Expr) {
                 // Use stored entry
                 Object value = data.getValue(id);
 
                 entry = new Parameter(
-                        "inline parameter",
+                        id,
+                        label,
                         value,
                         ParameterType.Expr.toTree(value),
                         ParameterType.Expr,
@@ -440,7 +463,8 @@ public class Fractal {
             } else {
                 // Use default entry
                 entry = new Parameter(
-                        "inline parameter",
+                        id,
+                        label,
                         "0",
                         new Int(0),
                         ParameterType.Expr,
@@ -449,8 +473,7 @@ public class Fractal {
             }
 
             entries.put(id, entry);
-            parameterOrder.add(id);
-
+            lastLabel = id;
             return entry.ast;
         }
 

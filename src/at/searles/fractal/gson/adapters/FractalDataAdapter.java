@@ -92,7 +92,7 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
         return deserializeParameters(dataElement, context);
     }
 
-    public Map<String, FractalData.Parameter> deserializeParameters(JsonElement json, JsonDeserializationContext context) throws JsonParseException {
+    public static Map<String, FractalData.Parameter> deserializeParameters(JsonElement json, JsonDeserializationContext context) throws JsonParseException {
         // {
         // "id": { "type": <type>, "value": ... }
         // }
@@ -152,7 +152,7 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
         }
     }
 
-    public JsonElement serializeParameters(Map<String, FractalData.Parameter> src, JsonSerializationContext context) {
+    public static JsonElement serializeParameters(Map<String, FractalData.Parameter> src, JsonSerializationContext context) {
         // {
         // "id": { "type": <type>, "value": ... }
         // }

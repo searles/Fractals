@@ -1,7 +1,8 @@
 package at.searles.fractal.data;
 
-/**
- * Created by searles on 27.12.18.
- */
-public class TypeCastException {
+public class TypeCastException extends RuntimeException {
+    public TypeCastException(ParameterType expected, Object value) {
+        super("bad type");
+        // fixme more life.
+    }
 }
