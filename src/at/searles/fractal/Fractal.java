@@ -252,6 +252,13 @@ public class Fractal {
         return entries.get(id);
     }
 
+    public void setSource(String source) {
+        this.data = this.data.copySetSource(source);
+        this.ast = ParserInstance.get().parseSource(data.source());
+        this.externDeclarations = externsMap(ast);
+        initExternData();
+    }
+
     public boolean setValue(String id, Object value) {
         if(!entries.containsKey(id)) {
             return false;
@@ -261,10 +268,7 @@ public class Fractal {
         FractalData oldData = data;
 
         if(id.equals(SOURCE_LABEL)) {
-            // for source we need a new ast.
-            this.data = this.data.copySetSource((String) value);
-            this.ast = ParserInstance.get().parseSource(data.source());
-            this.externDeclarations = externsMap(ast);
+            setSource(source());
         } else if(value == null) {
             data = data.copyResetParameter(id);
         } else {
@@ -282,6 +286,7 @@ public class Fractal {
             this.data = oldData;
             this.ast = ParserInstance.get().parseSource(data.source());
             this.externDeclarations = externsMap(ast);
+            initExternData();
             compile(); // it was successful before.
             throw ex; // rethrow.
         }
@@ -320,6 +325,7 @@ public class Fractal {
             this.data = data;
             this.ast = ParserInstance.get().parseSource(data.source());
             this.externDeclarations = externsMap(ast);
+            initExternData();
             compile();
             notifyFractalModified();
         } catch (MeelanException ex) {
@@ -373,9 +379,7 @@ public class Fractal {
             // 3. let currying do the rest.
 
             int paletteIndex = paletteIndices.get(id);
-
             Tree body = LdPalette.get().apply(Arrays.asList(new Int(paletteIndex), new Id(TEMP_VAR)));
-
             return new Lambda(Collections.singletonList(TEMP_VAR), body);
         }
 
