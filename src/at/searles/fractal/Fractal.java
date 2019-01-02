@@ -74,7 +74,7 @@ public class Fractal {
      * later. For other non-default RS-datastructures (eg scale) the same
      * method is required.
      */
-    private TreeMap<String, Integer> paletteIndices;
+    private List<String> paletteIds;
 
     // FIXME can't scale be a matrix?
     private List<Scale> scales; // updated during compilation
@@ -154,24 +154,27 @@ public class Fractal {
      */
     private void initExternData() {
         // Initializations that only depend on Ast and ExternDeclarations.
-        this.palettes = new LinkedList<>();
-        this.paletteIndices = new TreeMap<>();
+        this.palettes = new ArrayList<>();
+        this.paletteIds = new ArrayList<>();
 
         this.scales = new LinkedList<>(); // FIXME replace by matrix?
         this.scaleIndices = new TreeMap<>();
 
-        int paletteCounter = 0;
         int scaleCounter = 0;
 
         for(ExternDeclaration extern : externDeclarations.values()) {
+            // The content in scales and palettes is not yet correct; it only
+            // reflects the information from all extern-statements in the code.
+            // The actual values are inserted in the compile method.
+
             // Add scales
             if(ParameterType.fromString(extern.externTypeString) == ParameterType.Palette) {
-                this.paletteIndices.put(extern.id, paletteCounter++);
-                this.palettes.add((Palette) ParameterType.Palette.toValue(extern.value));
+                this.paletteIds.add(extern.id);
             }
 
-            // Add  declarations
+            // Add declarations
             if(ParameterType.fromString(extern.externTypeString) == ParameterType.Scale) {
+                // FIXME none of both is needed.
                 this.scaleIndices.put(extern.id, scaleCounter++);
                 this.scales.add((Scale) ParameterType.Scale.toValue(extern.value));
             }
@@ -194,12 +197,21 @@ public class Fractal {
         // place holder to preserve order. It will be added afterwards
         entries.put(SCALE_LABEL, null);
 
-
         // next instruction will update 'entries' and 'parameterOrder'
         IntCode asmCode = ast.compile(FractviewInstructionSet.get(), resolver);
         this.code = asmCode.createIntCode();
 
+        // update palette list.
+        palettes.clear();
+
+        for(String paletteId : paletteIds) {
+            Palette p = (Palette) getParameter(paletteId).value;
+            palettes.add(p);
+        }
+
         // and update scale
+
+        // FIXME
 
         Scale customScale = (Scale) data.getValue(SCALE_LABEL);
 
@@ -283,23 +295,11 @@ public class Fractal {
             // TypeCastException if invalid type.
 
             // roll back
-            this.data = oldData;
-            this.ast = ParserInstance.get().parseSource(data.source());
-            this.externDeclarations = externsMap(ast);
-            initExternData();
-            compile(); // it was successful before.
+            setData(oldData);
             throw ex; // rethrow.
         }
 
         return true; // something changed.
-    }
-
-    public Object value(String id) {
-        if(id.equals(SOURCE_LABEL)) {
-            return data.source;
-        } else {
-            return data.getParameter(id).value;
-        }
     }
 
     public Scale scale() {
@@ -329,12 +329,8 @@ public class Fractal {
             compile();
             notifyFractalModified();
         } catch (MeelanException ex) {
-            // roll back
-            this.data = oldData;
-            this.ast = ParserInstance.get().parseSource(oldData.source());
-            this.externDeclarations = externsMap(ast);
-            compile(); // it was successful before.
-
+            // roll back (it was already successful.
+            setData(oldData);
             throw ex; // rethrow.
         }
     }
@@ -378,7 +374,7 @@ public class Fractal {
             // 2. return 'palette(index)
             // 3. let currying do the rest.
 
-            int paletteIndex = paletteIndices.get(id);
+            int paletteIndex = paletteIds.indexOf(id); // there are not that many.
             Tree body = LdPalette.get().apply(Arrays.asList(new Int(paletteIndex), new Id(TEMP_VAR)));
             return new Lambda(Collections.singletonList(TEMP_VAR), body);
         }

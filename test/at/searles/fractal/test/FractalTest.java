@@ -73,7 +73,7 @@ public class FractalTest {
         fractal.setValue("a", "b");
 
         Assert.assertNotNull(fractal.getParameter("b"));
-        Assert.assertEquals("13", fractal.value("b"));
+        Assert.assertEquals("13", fractal.getParameter("b").value);
     }
 
     @Test
