@@ -95,7 +95,7 @@ public class ParameterTable {
             int fractalIndex = fractalIndex(i);
 
             for(Fractal.Parameter p : provider.getFractal(fractalIndex).requiredParameters()) { // those that are actually in use; including source/scale
-                FractalProvider.ParameterEntry entry = new FractalProvider.ParameterEntry(p.id, i, p);
+                FractalProvider.ParameterEntry entry = new FractalProvider.ParameterEntry(p.id, fractalIndex, p);
                 parametersInOrder.add(entry);
             }
         }
