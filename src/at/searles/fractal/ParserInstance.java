@@ -19,8 +19,8 @@ public class ParserInstance {
         return singleton;
     }
 
-    private MeelanEnv env;
-    private MeelanParser parser;
+    private final MeelanEnv env;
+    private final MeelanParser parser;
 
     private ParserInstance() {
         this.env = new MeelanEnv();
@@ -33,9 +33,7 @@ public class ParserInstance {
         Tree tree = parser.parseExpr(env, stream);
 
         if(!stream.isEmpty()) {
-            // TODO 2018-07-11: There should be some warning in this case.
-            // Proposal: Throw exception with tree and catch it.
-            // FIXME isEmpty is not reliable. throw new MeelanException("not fully parsed!", tree);
+            // FIXME some kind of warning that it was not fully parsed?
         }
 
         return tree;
@@ -48,7 +46,6 @@ public class ParserInstance {
 
         if(!stream.isEmpty()) {
             // TODO 2018-07-11: There should be some warning in this case.
-            // Proposal: Throw exception with tree and catch it.
             throw new MeelanException("not fully parsed!", null);
         }
 

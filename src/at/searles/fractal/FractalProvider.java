@@ -2,7 +2,9 @@ package at.searles.fractal;
 
 import at.searles.fractal.data.FractalData;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.TreeSet;
 
 /**
  * There is one source file for a fractal provider. It is compiled and that way,
@@ -152,7 +154,6 @@ public class FractalProvider {
 
     /**
      * Sets the data of the current key fractal.
-     * @param data
      */
     public void setKeyFractal(FractalData data) {
         fractals.get(keyIndex).setData(data, false, true, false);

@@ -1,12 +1,5 @@
 package at.searles.fractal.test;
 
-import at.searles.fractal.entries.FavoriteEntry;
-import at.searles.fractal.gson.Serializers;
-import org.junit.Assert;
-import org.junit.Test;
-
-import java.io.IOException;
-
 public class EntriesTest {
 
 //    @Test

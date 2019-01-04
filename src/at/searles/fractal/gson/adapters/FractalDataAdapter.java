@@ -1,25 +1,16 @@
 package at.searles.fractal.gson.adapters;
 
 import at.searles.fractal.Fractal;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
-
-import java.lang.reflect.Type;
-import java.util.Map;
-import java.util.TreeMap;
-
 import at.searles.fractal.data.FractalData;
 import at.searles.fractal.data.ParameterType;
 import at.searles.math.Cplx;
 import at.searles.math.Scale;
 import at.searles.math.color.Palette;
+import com.google.gson.*;
+
+import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDeserializer<FractalData> {
 
@@ -99,7 +90,7 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
         try {
             JsonObject obj = (JsonObject) json;
 
-            Map<String, FractalData.Parameter> data = new TreeMap<String, FractalData.Parameter>();
+            Map<String, FractalData.Parameter> data = new TreeMap<>();
 
             for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
                 String id = entry.getKey();
@@ -184,7 +175,7 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
 
     private Map<String, FractalData.Parameter> oldGetParameters(JsonObject obj, JsonDeserializationContext context) {
         // Fetch data.
-        Map<String, FractalData.Parameter> dataMap = new TreeMap<String, FractalData.Parameter>();
+        Map<String, FractalData.Parameter> dataMap = new TreeMap<>();
 
         JsonObject data = obj.getAsJsonObject(OLD_DATA_LABEL);
 

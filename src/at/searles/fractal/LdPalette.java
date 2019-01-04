@@ -1,9 +1,5 @@
 package at.searles.fractal;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import at.searles.meelan.ops.SystemInstruction;
 import at.searles.meelan.ops.SystemType;
 import at.searles.meelan.optree.Tree;
@@ -11,13 +7,16 @@ import at.searles.meelan.types.BaseType;
 import at.searles.meelan.types.FunctionType;
 import at.searles.meelan.values.Const;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class LdPalette extends SystemInstruction {
 
     private static LdPalette singleton;
 
     public static LdPalette get() {
         if(singleton == null) {
-            // TODO: First parameter is always constant
             singleton = new LdPalette();
         }
 

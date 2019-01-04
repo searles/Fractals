@@ -1,14 +1,13 @@
 package at.searles.fractal.gson;
 
-import at.searles.fractal.gson.adapters.*;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
-import at.searles.fractal.entries.FavoriteEntry;
 import at.searles.fractal.data.FractalData;
+import at.searles.fractal.entries.FavoriteEntry;
+import at.searles.fractal.gson.adapters.*;
 import at.searles.math.Cplx;
 import at.searles.math.Scale;
 import at.searles.math.color.Palette;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
  * This class contains all serializers for custom classes from this and other

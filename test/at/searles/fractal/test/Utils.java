@@ -2,7 +2,10 @@ package at.searles.fractal.test;
 
 import at.searles.fractal.gson.Serializers;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 
 public class Utils {
     public static String readResourceFile(String filename) throws IOException {

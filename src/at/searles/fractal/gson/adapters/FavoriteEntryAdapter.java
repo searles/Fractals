@@ -1,19 +1,11 @@
 package at.searles.fractal.gson.adapters;
 
 import at.searles.fractal.data.FractalData;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
+import at.searles.fractal.entries.FavoriteEntry;
+import com.google.gson.*;
 
 import java.lang.reflect.Type;
 import java.util.Base64;
-
-import at.searles.fractal.entries.FavoriteEntry;
-import at.searles.fractal.Fractal;
 
 public class FavoriteEntryAdapter implements JsonDeserializer<FavoriteEntry>, JsonSerializer<FavoriteEntry> {
 

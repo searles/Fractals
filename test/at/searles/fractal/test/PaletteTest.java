@@ -1,13 +1,7 @@
 package at.searles.fractal.test;
 
 import at.searles.fractal.Fractal;
-import at.searles.fractal.FractviewInstructionSet;
 import at.searles.fractal.data.FractalData;
-import at.searles.fractal.entries.FavoriteEntry;
-import at.searles.meelan.compiler.Ast;
-import at.searles.meelan.compiler.IntCode;
-import at.searles.meelan.parser.MeelanEnv;
-import at.searles.parsing.parser.ParserStream;
 import org.junit.Assert;
 import org.junit.Test;
 

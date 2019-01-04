@@ -4,9 +4,6 @@ import at.searles.meelan.optree.inlined.ExternDeclaration;
 
 import java.util.*;
 
-import java.util.ArrayList;
-import java.util.Map;
-
 public class ParameterTable {
 
     private final FractalProvider provider;
@@ -219,7 +216,7 @@ public class ParameterTable {
         for (int i = 0; i < parametersInOrder.size(); ++i) {
             String id = parametersInOrder.get(i).id;
             if (markSharedParameters.contains(id)) {
-                // fixme check parameter type
+                // fixme here I should check the parameter type?
                 parametersInOrder.remove(i);
                 i--;
             } else {
@@ -235,7 +232,7 @@ public class ParameterTable {
                         unsharedParameters.put(id, entries);
                     }
 
-                    entries[entry.owner] = entry; // FIXME NPE
+                    entries[entry.owner] = entry;
                 }
             }
         }

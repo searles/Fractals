@@ -12,6 +12,7 @@ import at.searles.meelan.values.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public enum ParameterType {
     // XXX in the future, all types should be expr.
@@ -164,9 +165,7 @@ public enum ParameterType {
                 return palette;
             }
 
-            for(Tree row : values) {
-                palette.add(toRow(row));
-            }
+            palette.addAll(values.stream().map(this::toRow).collect(Collectors.toList()));
 
             return palette;
         }
@@ -175,11 +174,7 @@ public enum ParameterType {
             if(tree instanceof at.searles.meelan.values.Int) {
                 return Collections.singletonList(toColor(tree));
             } else if(tree instanceof Vec) {
-                ArrayList<Integer> row = new ArrayList<>();
-
-                for(Tree cell : ((Vec) tree).values()) {
-                    row.add(toColor(cell));
-                }
+                ArrayList<Integer> row = ((Vec) tree).values().stream().map(this::toColor).collect(Collectors.toCollection(ArrayList::new));
 
                 return row;
             }

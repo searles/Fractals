@@ -1,8 +1,6 @@
 package at.searles.fractal;
 
 
-import java.util.*;
-
 import at.searles.fractal.data.FractalData;
 import at.searles.fractal.data.ParameterType;
 import at.searles.math.Scale;
@@ -17,6 +15,8 @@ import at.searles.meelan.optree.inlined.Id;
 import at.searles.meelan.optree.inlined.Lambda;
 import at.searles.meelan.symbols.IdResolver;
 import at.searles.meelan.values.Int;
+
+import java.util.*;
 
 /*
  * When parsing, an instance of ExternData is created.
@@ -38,8 +38,6 @@ import at.searles.meelan.values.Int;
 
 public class Fractal {
 
-    // fixme setters package private. only access from provider
-
     public static final String SCALE_LABEL = "Scale";
     public static final Scale DEFAULT_SCALE = new Scale(2, 0, 0, 2, 0, 0);
     private static final String SCALE_DESCRIPTION = "Scale";
@@ -53,7 +51,7 @@ public class Fractal {
     private FractalData data;
 
     private int historyIndex;
-    private ArrayList<FractalData> history;
+    private final ArrayList<FractalData> history;
 
     /**
      * Ast of the source code
@@ -78,7 +76,6 @@ public class Fractal {
      */
     private List<String> paletteIds;
 
-    // FIXME can't scale be a matrix?
     private List<Scale> scales; // updated during compilation
     private TreeMap<String, Integer> scaleIndices; // fixme not used currently
 
@@ -86,7 +83,7 @@ public class Fractal {
      * The resolver for ids during compilation. Used for
      * externs
      */
-    private FractalResolver resolver;
+    private final FractalResolver resolver;
 
     /**
      * Used parameters. Includes implcitly defined parameters which
@@ -99,7 +96,7 @@ public class Fractal {
     // final step
     private int[] code;
 
-    private List<Listener> listeners;
+    private final List<Listener> listeners;
 
     private static LinkedHashMap<String, ExternDeclaration> externsMap(Ast ast) {
         List<ExternDeclaration> externs = ast.traverseExternData();
@@ -166,7 +163,7 @@ public class Fractal {
         this.palettes = new ArrayList<>();
         this.paletteIds = new ArrayList<>();
 
-        this.scales = new LinkedList<>(); // FIXME replace by matrix?
+        this.scales = new LinkedList<>();
         this.scaleIndices = new TreeMap<>();
 
         int scaleCounter = 0;
@@ -183,7 +180,6 @@ public class Fractal {
 
             // Add declarations
             if(ParameterType.fromString(extern.externTypeString) == ParameterType.Scale) {
-                // FIXME none of both is needed.
                 this.scaleIndices.put(extern.id, scaleCounter++);
                 this.scales.add((Scale) ParameterType.Scale.toValue(extern.value));
             }
@@ -229,7 +225,7 @@ public class Fractal {
         if(customScale != null) {
             entries.put(SCALE_LABEL, new Parameter(
                     SCALE_LABEL,
-                    "Current Zoom", // FIXME name.
+                    SCALE_DESCRIPTION,
                     customScale,
                     null, // not needed because it is not implemented
                     ParameterType.Scale,

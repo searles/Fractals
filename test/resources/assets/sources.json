@@ -1,7 +1,0 @@
-{
-    "Default": {
-        "icon": "default.png",
-        "description": "Basic program for fractals with polynomial functions",
-        "source": "Default.fv"
-    }
-}
