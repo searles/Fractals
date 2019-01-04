@@ -150,6 +150,26 @@ public class FractalProvider {
         return listeners.remove(l);
     }
 
+    // === History ===
+
+    public boolean historyForward(int index) {
+        if(getFractal(index).historyForward()) {
+            fireParametersUpdated();
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean historyBack(int index) {
+        if(getFractal(index).historyBack()) {
+            fireParametersUpdated();
+            return true;
+        }
+
+        return false;
+    }
+
     // === Key Fractals ===
 
     /**

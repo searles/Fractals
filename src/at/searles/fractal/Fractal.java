@@ -348,7 +348,7 @@ public class Fractal {
     // === Handle History ===
 
     public boolean historyForward() {
-        if(historyIndex >= history.size()) {
+        if(historyIndex >= history.size() - 1) {
             return false;
         }
 
@@ -359,8 +359,6 @@ public class Fractal {
     }
 
     public boolean historyBack() {
-        // FIXME It should be added!
-
         if(historyIndex <= 0) {
             return false;
         }
@@ -369,13 +367,6 @@ public class Fractal {
         setData(newData, false, false, false);
 
         return true;
-    }
-
-    public void historySetToLast() {
-        // move historyIndex to the end of it.
-        historyIndex = history.size() - 1;
-        FractalData newData = history.get(historyIndex);
-        setData(newData, false, false, false);
     }
 
     // === Internal data structures ===
