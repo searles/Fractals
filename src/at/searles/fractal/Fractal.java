@@ -5,7 +5,6 @@ import java.util.*;
 
 import at.searles.fractal.data.FractalData;
 import at.searles.fractal.data.ParameterType;
-import at.searles.fractal.data.TypeCastException;
 import at.searles.math.Scale;
 import at.searles.math.color.Palette;
 import at.searles.meelan.MeelanException;
@@ -52,6 +51,9 @@ public class Fractal {
      * Pure data container
      */
     private FractalData data;
+
+    private int historyIndex;
+    private ArrayList<FractalData> history;
 
     /**
      * Ast of the source code
@@ -127,12 +129,17 @@ public class Fractal {
 
         this.listeners = new LinkedList<>();
 
+        this.history = new ArrayList<>();
+        this.historyIndex = 0;
+
         // Find scales and palettes from externs.
         // We might store more than necessary, but it
         // is way simpler this way, and we can assume
         // that programmers are at least a bit reasonable.
-        initExternData();
+        initStructureTypes();
     }
+
+    // === Handle Listeners ===
 
     public void addListener(Listener l) {
         listeners.add(l);
@@ -148,11 +155,13 @@ public class Fractal {
         }
     }
 
+    // === Compilation and Structure Types ===
+
     /**
      * Precondition: "externs" contains a correct value.
      * Sets order, palettes and scales.
      */
-    private void initExternData() {
+    private void initStructureTypes() {
         // Initializations that only depend on Ast and ExternDeclarations.
         this.palettes = new ArrayList<>();
         this.paletteIds = new ArrayList<>();
@@ -181,7 +190,7 @@ public class Fractal {
         }
     }
 
-    void compile() {
+    private void compile() {
         // update data structures
         entries = new LinkedHashMap<>();
 
@@ -211,7 +220,7 @@ public class Fractal {
 
         // and update scale
 
-        // FIXME
+        // FIXME scales should work like palettes.
 
         Scale customScale = (Scale) data.getValue(SCALE_LABEL);
 
@@ -248,6 +257,10 @@ public class Fractal {
         }
     }
 
+    public int[] code() {
+        return code;
+    }
+
     /**
      * Since palettes must be transferred directly to the script, convenience method
      * to collect all palettes
@@ -260,15 +273,18 @@ public class Fractal {
         return scales;
     }
 
-    public Parameter getParameter(String id) {
-        return entries.get(id);
+    // === Parameters and Values ===
+
+    public Iterable<Fractal.Parameter> requiredParameters() {
+        return entries.values();
     }
 
-    public void setSource(String source) {
-        this.data = this.data.copySetSource(source);
-        this.ast = ParserInstance.get().parseSource(data.source());
-        this.externDeclarations = externsMap(ast);
-        initExternData();
+    public Iterable<ExternDeclaration> externDeclarations() {
+        return externDeclarations.values();
+    }
+
+    public Parameter getParameter(String id) {
+        return entries.get(id);
     }
 
     public boolean setValue(String id, Object value) {
@@ -276,27 +292,11 @@ public class Fractal {
             return false;
         }
 
-        // Preserve data
-        FractalData oldData = data;
-
         if(id.equals(SOURCE_LABEL)) {
-            setSource(source());
-        } else if(value == null) {
-            data = data.copyResetParameter(id);
+            setData(this.data.copySetSource((String) value), false, true, false);
         } else {
-            data = data.copySetParameter(id, getParameter(id).type, value);
-        }
-
-        try {
-            compile();
-            notifyFractalModified();
-        } catch (MeelanException | TypeCastException ex) {
-            // MeelanException if expr cannot be compiled
-            // TypeCastException if invalid type.
-
-            // roll back
-            setData(oldData);
-            throw ex; // rethrow.
+            FractalData newData = value != null ? data.copySetParameter(id, getParameter(id).type, value) : data.copyResetParameter(id);
+            setData(newData, true, true, false);
         }
 
         return true; // something changed.
@@ -314,34 +314,60 @@ public class Fractal {
         return data.source;
     }
 
-    public int[] code() {
-        return code;
-    }
-
-    void setData(FractalData data) {
+    void setData(FractalData data, boolean keepAst, boolean storeInHistory, boolean isRollback) {
         FractalData oldData = this.data;
+        this.data = data;
 
         try {
-            this.data = data;
-            this.ast = ParserInstance.get().parseSource(data.source());
-            this.externDeclarations = externsMap(ast);
-            initExternData();
+            if(!keepAst) {
+                this.ast = ParserInstance.get().parseSource(data.source());
+                this.externDeclarations = externsMap(ast);
+                initStructureTypes();
+            }
+
             compile();
-            notifyFractalModified();
         } catch (MeelanException ex) {
-            // roll back (it was already successful.
-            setData(oldData);
+            // roll back (it was already successful).
+            setData(oldData, keepAst, false, true);
             throw ex; // rethrow.
+        }
+
+        // success on compiling. If requested, store in history.
+        if(storeInHistory) {
+            history.add(historyIndex++, oldData);
+        }
+
+        if(!isRollback) {
+            // should not be called if there was a compiler error.
+            notifyFractalModified();
         }
     }
 
-    public Iterable<Fractal.Parameter> requiredParameters() {
-        return entries.values();
+    // === Handle History ===
+
+    public boolean historyForward() {
+        if(historyIndex >= history.size()) {
+            return false;
+        }
+
+        FractalData newData = history.get(historyIndex++);
+        setData(newData, false, false, false);
+
+        return true;
     }
 
-    public Iterable<ExternDeclaration> externDeclarations() {
-        return externDeclarations.values();
+    public boolean historyBack() {
+        if(historyIndex <= 0) {
+            return false;
+        }
+
+        FractalData newData = history.get(--historyIndex);
+        setData(newData, false, false, false);
+
+        return true;
     }
+
+    // === Internal data structures ===
 
     public interface Listener {
         void fractalModified(Fractal fractal);
@@ -365,6 +391,9 @@ public class Fractal {
         }
     }
 
+    /**
+     * For Meelan; returns identifiers that are associated with this fractal
+     */
     private class FractalResolver implements IdResolver {
 
         private static final String TEMP_VAR = "_";

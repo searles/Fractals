@@ -30,6 +30,8 @@ public class FractalProvider {
         this.parameterTable = new ParameterTable(this);
     }
 
+    // === Handle parameters ===
+
     private void fireParametersUpdated() {
         parameterTable.invalidate();
         for(Listener l : listeners) {
@@ -81,6 +83,8 @@ public class FractalProvider {
         }
     }
 
+    // === Add/Remove Fractals ===
+
     /**
      * Adds a new fractal to the end of the list. If there
      * was no fractal before, then the key-index is set to 0.
@@ -89,7 +93,6 @@ public class FractalProvider {
      */
     public int addFractal(FractalData fractalData) {
         Fractal fractal = Fractal.fromData(fractalData);
-        fractal.compile();
 
         fractals.add(fractal);
 
@@ -121,6 +124,8 @@ public class FractalProvider {
         return removedIndex;
     }
 
+    // === Getters ===
+
     public int fractalCount() {
         return fractals.size();
     }
@@ -133,6 +138,8 @@ public class FractalProvider {
         return fractals.get(index);
     }
 
+    // === Handle listeners ===
+
     public void addListener(Listener l) {
         listeners.add(l);
     }
@@ -141,12 +148,14 @@ public class FractalProvider {
         return listeners.remove(l);
     }
 
+    // === Key Fractals ===
+
     /**
      * Sets the data of the current key fractal.
      * @param data
      */
     public void setKeyFractal(FractalData data) {
-        fractals.get(keyIndex).setData(data);
+        fractals.get(keyIndex).setData(data, false, true, false);
         fireParametersUpdated();
     }
 
@@ -163,7 +172,8 @@ public class FractalProvider {
         return keyIndex;
     }
 
-    // Handle exclusive parameters
+    // === Handle exclusive parameters ===
+
     public Iterator<String> exclusiveParameters() {
         return exclusiveParameterIds.iterator();
     }
@@ -183,6 +193,8 @@ public class FractalProvider {
             fireParametersUpdated();
         }
     }
+
+    // === Internal data structures ===
 
     public static class ParameterEntry {
         public final String id;
