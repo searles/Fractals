@@ -50,7 +50,7 @@ public class Fractal {
      */
     private FractalData data;
 
-    private int historyIndex;
+    private int historyIndex; // position of data in historylist.
     private final ArrayList<FractalData> history;
 
     /**
@@ -126,8 +126,9 @@ public class Fractal {
 
         this.listeners = new LinkedList<>();
 
-        this.history = new ArrayList<>();
         this.historyIndex = 0;
+        this.history = new ArrayList<>();
+        this.history.add(data);
 
         // Find scales and palettes from externs.
         // We might store more than necessary, but it
@@ -244,7 +245,7 @@ public class Fractal {
 
             entries.put(SCALE_LABEL, new Parameter(
                     SCALE_LABEL,
-                    "Current Zoom",
+                    SCALE_DESCRIPTION,
                     scale,
                     null, // not needed because it is not implemented
                     ParameterType.Scale,
@@ -330,7 +331,12 @@ public class Fractal {
 
         // success on compiling. If requested, store in history.
         if(storeInHistory) {
-            history.add(historyIndex++, oldData);
+            history.add(++historyIndex, this.data);
+        }
+
+        if(history.get(historyIndex) != this.data) {
+            // FIXME remove after verification
+            throw new IllegalArgumentException();
         }
 
         if(!isRollback) {
@@ -346,13 +352,15 @@ public class Fractal {
             return false;
         }
 
-        FractalData newData = history.get(historyIndex++);
+        FractalData newData = history.get(++historyIndex);
         setData(newData, false, false, false);
 
         return true;
     }
 
     public boolean historyBack() {
+        // FIXME It should be added!
+
         if(historyIndex <= 0) {
             return false;
         }
@@ -361,6 +369,13 @@ public class Fractal {
         setData(newData, false, false, false);
 
         return true;
+    }
+
+    public void historySetToLast() {
+        // move historyIndex to the end of it.
+        historyIndex = history.size() - 1;
+        FractalData newData = history.get(historyIndex);
+        setData(newData, false, false, false);
     }
 
     // === Internal data structures ===
