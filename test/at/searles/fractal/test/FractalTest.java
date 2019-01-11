@@ -7,18 +7,19 @@ import at.searles.math.Scale;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
-
 /**
  * Tests for the central fractal class
  */
 public class FractalTest {
     static Fractal fromSource(String source) {
-        return Fractal.fromData(new FractalData(source, Collections.emptyMap()));
+        return Fractal.fromData(new FractalData.Builder().setSource(source).commit());
     }
 
     static Fractal fromSource(String source, String id, ParameterType type, Object value) {
-        return Fractal.fromData(new FractalData(source, Collections.singletonMap(id, new FractalData.Parameter(type, value))));
+        FractalData.Builder b = new FractalData.Builder().setSource(source);
+        assert b.queryType(id) == type;
+        b.addParameter(id, value);
+        return Fractal.fromData(b.commit());
     }
 
     @Test

@@ -16,7 +16,7 @@ public class PaletteTest {
                 "[#f88, #ff8, #afc, #88f]];" +
                 "var x = lakepalette (1:1)";
 
-        Fractal f = Fractal.fromData(new FractalData(source, Collections.emptyMap()));
+        Fractal f = Fractal.fromData(new FractalData.Builder().setSource(source).commit());
 
         int[] code = f.code();
 

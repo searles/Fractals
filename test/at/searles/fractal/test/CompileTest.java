@@ -4,6 +4,7 @@ import at.searles.fractal.Fractal;
 import at.searles.fractal.data.FractalData;
 import at.searles.meelan.MeelanException;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -12,10 +13,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class CompileTest {
+
+    FractalData.Builder builder;
+    private Fractal fractal;
+
+    @Before
+    public void setUp() {
+        this.builder = new FractalData.Builder();
+    }
+
     @Test
     public void testAdditionOfThree() throws IOException {
         withSourceFile("assets/sources/v3/ThreeBug.fv");
-        withParameters();
 
         actCompileFractal();
 
@@ -25,7 +34,6 @@ public class CompileTest {
     @Test
     public void testSimpleBug() throws IOException {
         withSourceFile("assets/sources/v3/Simple.fv");
-        withParameters();
 
         actCompileFractal();
 
@@ -35,7 +43,6 @@ public class CompileTest {
     @Test
     public void testCompileDefault() throws IOException {
         withSourceFile("assets/sources/v3/Default.fv");
-        withParameters();
 
         actCompileFractal();
 
@@ -44,14 +51,13 @@ public class CompileTest {
 
     @Test
     public void testV3() throws IOException {
-        withParameters();
-
         File dir = new File("test/resources/assets/sources/v3");
 
         File[] files = dir.listFiles();
 
         for(File file : files) {
-            this.source = Utils.readFile(file);
+            this.builder = new FractalData.Builder();
+            this.builder.setSource(Utils.readFile(file));
 
             try {
                 actCompileFractal();
@@ -62,19 +68,12 @@ public class CompileTest {
         }
     }
 
-    private Fractal fractal;
-    private String source;
-    private Map<String, FractalData.Parameter> parameters;
-
     private void actCompileFractal() {
-        fractal = Fractal.fromData(new FractalData(source, parameters));
+        fractal = Fractal.fromData(builder.commit());
     }
 
     private void withSourceFile(String filename) throws IOException {
-        this.source = Utils.readResourceFile(filename);
-    }
-
-    private void withParameters() {
-        parameters = new HashMap<>();
+        String source = Utils.readResourceFile(filename);
+        builder.setSource(source);
     }
 }

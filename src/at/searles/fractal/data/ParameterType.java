@@ -1,25 +1,29 @@
 package at.searles.fractal.data;
 
+import at.searles.fractal.FractviewInstructionSet;
 import at.searles.fractal.ParserInstance;
 import at.searles.math.Cplx;
 import at.searles.math.Scale;
 import at.searles.math.color.Palette;
 import at.searles.meelan.MeelanException;
+import at.searles.meelan.ops.cons.Cons;
 import at.searles.meelan.optree.Tree;
 import at.searles.meelan.optree.Vec;
+import at.searles.meelan.optree.compiled.App;
+import at.searles.meelan.optree.inlined.Frame;
+import at.searles.meelan.symbols.IdResolver;
+import at.searles.meelan.symbols.SymTable;
 import at.searles.meelan.values.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public enum ParameterType {
     // XXX in the future, all types should be expr.
     Int("int") {
         @Override
         public Object toValue(Tree tree) {
-            if(tree instanceof at.searles.meelan.values.Int) {
+            if(tree instanceof Int) {
                 return ((Int) tree).value();
             }
 
@@ -34,16 +38,21 @@ public enum ParameterType {
 
             return new Int(((Number) value).intValue());
         }
+
+        @Override
+        public boolean isInstance(Object value) {
+            return value instanceof Integer;
+        }
     },
     Real("real") {
         @Override
         public Double toValue(Tree tree) {
-            if(tree instanceof at.searles.meelan.values.Int) {
-                return (double) ((at.searles.meelan.values.Int) tree).value();
+            if(tree instanceof Int) {
+                return (double) ((Int) tree).value();
             }
 
-            if(tree instanceof at.searles.meelan.values.Real) {
-                return ((at.searles.meelan.values.Real) tree).value();
+            if(tree instanceof Real) {
+                return ((Real) tree).value();
             }
 
             throw new MeelanException("not a real", tree);
@@ -57,20 +66,25 @@ public enum ParameterType {
 
             return new Real(((Number) value).doubleValue());
         }
+
+        @Override
+        public boolean isInstance(Object value) {
+            return value instanceof Number;
+        }
     },
     Cplx("cplx") {
         @Override
         public Object toValue(Tree tree) {
-            if(tree instanceof at.searles.meelan.values.Int) {
-                return new at.searles.math.Cplx(((at.searles.meelan.values.Int) tree).value());
+            if(tree instanceof CplxVal) {
+                return ((CplxVal) tree).value();
             }
 
-            if(tree instanceof at.searles.meelan.values.Real) {
-                return new at.searles.math.Cplx(((at.searles.meelan.values.Real) tree).value());
+            if(tree instanceof Real) {
+                return new Cplx(((Real) tree).value(), 0);
             }
 
-            if(tree instanceof at.searles.meelan.values.CplxVal) {
-                return ((at.searles.meelan.values.CplxVal) tree).value();
+            if(tree instanceof Int) {
+                return new Cplx(((Int) tree).value(), 0);
             }
 
             throw new MeelanException("not a cplx", tree);
@@ -88,6 +102,11 @@ public enum ParameterType {
 
             return new CplxVal((Cplx) value);
         }
+
+        @Override
+        public boolean isInstance(Object value) {
+            return value instanceof Cplx || value instanceof Number;
+        }
     },
     Bool("bool") {
         @Override
@@ -101,11 +120,16 @@ public enum ParameterType {
 
         @Override
         public Tree toTree(Object value) {
-            if(!(value instanceof Boolean)) {
+            if(!isInstance(value)) {
                 throw new TypeCastException(this, value);
             }
 
             return new Bool((Boolean) value);
+        }
+
+        @Override
+        public boolean isInstance(Object value) {
+            return value instanceof Boolean;
         }
     },
     Expr("expr") {
@@ -124,6 +148,11 @@ public enum ParameterType {
             // kinda joker
             return ParserInstance.get().parseExpr(value.toString());
         }
+
+        @Override
+        public boolean isInstance(Object value) {
+            return true;
+        }
     },
     Color("color") {
         @Override
@@ -133,101 +162,152 @@ public enum ParameterType {
 
         @Override
         public Tree toTree(Object value) {
-            if(!(value instanceof Integer)) {
+            if(!isInstance(value)) {
                 throw new TypeCastException(this, value);
             }
 
             return new Int((Integer) value);
         }
+
+        @Override
+        public boolean isInstance(Object value) {
+            return value instanceof Integer;
+        }
     },
     Palette("palette") {
-        List<List<Integer>> toTable(Tree tree) {
-            if(!(tree instanceof Vec)) {
-                throw new MeelanException("not a table", tree);
-            }
-
-            List<Tree> values = ((Vec) tree).values();
-
-            if(values.isEmpty()) {
-                throw new MeelanException("palette must not be empty", tree);
-            }
-
-            List<List<Integer>> palette = new ArrayList<>(values.size());
-
-            if(!(values.get(0) instanceof Vec)) {
-                // [ c, c, c]
-                List<Integer> row = toRow(tree);
-
-                for(Integer color : row) {
-                    palette.add(Collections.singletonList(color));
-                }
-
-                return palette;
-            }
-
-            palette.addAll(values.stream().map(this::toRow).collect(Collectors.toList()));
-
-            return palette;
-        }
-
-        private List<Integer> toRow(Tree tree) {
-            if(tree instanceof at.searles.meelan.values.Int) {
-                return Collections.singletonList(toColor(tree));
-            } else if(tree instanceof Vec) {
-                ArrayList<Integer> row = ((Vec) tree).values().stream().map(this::toColor).collect(Collectors.toCollection(ArrayList::new));
-
-                return row;
-            }
-
-            throw new MeelanException("not a palette row", tree);
-        }
-
-        private Integer toColor(Tree tree) {
-            if(tree instanceof at.searles.meelan.values.Int) {
-                return ((at.searles.meelan.values.Int) tree).value();
-            }
-
-            throw new MeelanException("", tree);
-        }
+//        List<List<Integer>> toTable(Tree tree) {
+//            if(!(tree instanceof Vec)) {
+//                throw new MeelanException("not a table", tree);
+//            }
+//
+//            List<Tree> values = ((Vec) tree).values();
+//
+//            if(values.isEmpty()) {
+//                throw new MeelanException("palette must not be empty", tree);
+//            }
+//
+//            List<List<Integer>> palette = new ArrayList<>(values.size());
+//
+//            if(!(values.get(0) instanceof Vec)) {
+//                // [ c, c, c]
+//                List<Integer> row = toRow(tree);
+//
+//                for(Integer color : row) {
+//                    palette.add(Collections.singletonList(color));
+//                }
+//
+//                return palette;
+//            }
+//
+//            palette.addAll(values.stream().map(this::toRow).collect(Collectors.toList()));
+//
+//            return palette;
+//        }
+//
+//        private List<Integer> toRow(Tree tree) {
+//            if(tree instanceof at.searles.meelan.values.Int) {
+//                return Collections.singletonList(toColor(tree));
+//            } else if(tree instanceof Vec) {
+//                ArrayList<Integer> row = ((Vec) tree).values().stream().map(this::toColor).collect(Collectors.toCollection(ArrayList::new));
+//
+//                return row;
+//            }
+//
+//            throw new MeelanException("not a palette row", tree);
+//        }
+////
+////        private Integer toColor(Tree tree) {
+////            if(tree instanceof at.searles.meelan.values.Int) {
+////                return ((at.searles.meelan.values.Int) tree).value();
+////            }
+////
+////            throw new MeelanException("", tree);
+////        }
+////
+////        public Palette toValu2e(Tree tree) {
+////            List<List<Integer>> table;
+////
+////            if(tree instanceof at.searles.meelan.values.Int) {
+////                table = Collections.singletonList(Collections.singletonList(((at.searles.meelan.values.Int) tree).value()));
+////            } else {
+////                table = toTable(tree);
+////            }
+////
+////            int height = table.size();
+////
+////            if(height == 0) {
+////                return new Palette(1, 1, new int[]{0xff000000});
+////            }
+////
+////            int width = 1;
+////
+////            for(List<Integer> row : table) {
+////                width = Math.max(row.size(), width);
+////            }
+////
+////            int colors[] = new int[height * width];
+////
+////            int y = 0;
+////
+////            for(List<Integer> row : table) {
+////                // if row is empty, use black.
+////                for(int x = 0; x < width; ++x) {
+////                    int color = row.size() > 0 ? row.get(x % row.size()) : 0xff000000;
+////
+////                    colors[y * width + x] = color;
+////                }
+////
+////                y++;
+////            }
+////
+////            return new Palette(width, height, colors);
+////        }
 
         @Override
         public Palette toValue(Tree tree) {
-            List<List<Integer>> table;
-
-            if(tree instanceof at.searles.meelan.values.Int) {
-                table = Collections.singletonList(Collections.singletonList(((at.searles.meelan.values.Int) tree).value()));
-            } else {
-                table = toTable(tree);
+            if(!(tree instanceof Vec)) {
+                throw new MeelanException("not a palette", tree);
             }
 
-            int height = table.size();
+            List<Tree> rows = ((Vec) tree).values();
 
-            if(height == 0) {
-                return new Palette(1, 1, new int[]{0xff000000});
+            if((rows.isEmpty() || rows.stream().filter(row -> !(row instanceof Vec)).findAny().isPresent())) {
+                throw new MeelanException("not a palette", tree);
             }
 
-            int width = 1;
+            int height = rows.size();
+            int width = rows.stream()
+                    .mapToInt(row -> ((Vec) row).values().size())
+                    .max()
+                    .orElseGet(() -> 1);
 
-            for(List<Integer> row : table) {
-                width = Math.max(row.size(), width);
-            }
+            // height must not be 0, width may be (it is filled up with black)
 
-            int colors[] = new int[height * width];
+            int[] colors = new int[width * height];
 
-            int y = 0;
+            int index = 0;
 
-            for(List<Integer> row : table) {
-                // if row is empty, use black.
-                for(int x = 0; x < width; ++x) {
-                    int color = row.size() > 0 ? row.get(x % row.size()) : 0xff000000;
+            for(Tree row : rows) {
+                int[] rowColors = ((Vec) row).values().stream().mapToInt(item -> {
+                            if (!(item instanceof Int)) {
+                                throw new MeelanException("not an integer", item);
+                            }
 
-                    colors[y * width + x] = color;
+                            return ((Int) item).value();
+                        }
+                ).toArray();
+
+                for (int i = 0; i < width; ++i) {
+                    colors[index++] = rowColors[i % rowColors.length];
                 }
-
-                y++;
             }
 
             return new Palette(width, height, colors);
+        }
+
+        @Override
+        public boolean isInstance(Object value) {
+            return value instanceof Value;
         }
 
         @Override
@@ -262,6 +342,11 @@ public enum ParameterType {
         public Tree toTree(Object value) {
             throw new IllegalArgumentException("prevent this to correctly handle scales");
         }
+
+        @Override
+        public boolean isInstance(Object value) {
+            return value instanceof Scale;
+        }
     }, Source("source") {
         @Override
         public Object toValue(Tree tree) {
@@ -271,6 +356,11 @@ public enum ParameterType {
         @Override
         public Tree toTree(Object value) {
             throw new IllegalArgumentException("this is unexpected and clearly a bug. please report");
+        }
+
+        @Override
+        public boolean isInstance(Object value) {
+            return value instanceof String;
         }
     };
 
@@ -296,32 +386,6 @@ public enum ParameterType {
      * This is not equivalent to the parsed tree!
      */
     public abstract Tree toTree(Object value);
+
+    public abstract boolean isInstance(Object value);
 }
-
-/*
-    private Tree createTreeFrom(Entry entry, Object value) {
-        switch (entry.key.type) {
-            case Int:
-                return new Int(((Number) value).intValue());
-            case Real:
-                return new Real(((Number) value).doubleValue());
-            case Cplx:
-                return new CplxVal((Cplx) value);
-            case Bool:
-                return new Bool((Boolean) value);
-            case Color:
-                return new Int((Integer) value);
-            case Expr:
-                // This may throw a MeelanException!
-                return ParserInstance.get().parseExpr((String) value);
-            case Palette:
-                return paletteLambda(entry.key.id);
-            case Scale:
-                // first occurrence of this palette.
-                return registerScale(entry.key.id);
-        }
-
-        throw new IllegalArgumentException("missing case: " + entry.key.type);
-    }
-
- */

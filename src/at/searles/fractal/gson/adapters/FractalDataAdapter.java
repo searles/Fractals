@@ -10,7 +10,6 @@ import com.google.gson.*;
 
 import java.lang.reflect.Type;
 import java.util.Map;
-import java.util.TreeMap;
 
 public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDeserializer<FractalData> {
 
@@ -35,28 +34,25 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
     private static final String CODE_LABEL = "code";
     private static final String DATA_LABEL = "data";
 
-    // For parameters
-    private static final String TYPE_LABEL = "type";
-    private static final String VALUE_LABEL = "value";
-
     @Override
-    public JsonElement serialize(FractalData fractal, Type typeOfSrc, JsonSerializationContext context) {
+    public JsonElement serialize(FractalData data, Type typeOfSrc, JsonSerializationContext context) {
         JsonObject ret = new JsonObject();
 
         // format:
         // "code": <code as String>
-        ret.addProperty(CODE_LABEL, fractal.source);
-        ret.add(DATA_LABEL, serializeParameters(fractal.parameters, context));
+        ret.addProperty(CODE_LABEL, data.source());
+        ret.add(DATA_LABEL, serializeParameters(data, context));
 
         return ret;
     }
 
     public FractalData deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-        try {
-            String code = getSourceCode((JsonObject) json);
-            Map<String, FractalData.Parameter> data = getParameters((JsonObject) json, context);
+        FractalData.Builder builder = new FractalData.Builder();
 
-            return new FractalData(code, data);
+        try {
+            String source = getSourceCode((JsonObject) json);
+            builder.setSource(source);
+            return queryParameters((JsonObject) json, context, builder);
         } catch(Throwable th) {
             throw new JsonParseException(th);
         }
@@ -72,91 +68,73 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
         return codeElement.getAsString();
     }
 
-    private Map<String, FractalData.Parameter> getParameters(JsonObject obj, JsonDeserializationContext context) {
+    private FractalData queryParameters(JsonObject obj, JsonDeserializationContext context, FractalData.Builder builder) {
 
         JsonElement dataElement = obj.get(DATA_LABEL);
 
         if (dataElement == null || !dataElement.isJsonObject()) {
-            return oldGetParameters(obj, context);
+            return oldDeserializeParameters(obj, context, builder);
         }
 
-        return deserializeParameters(dataElement, context);
+        return deserializeParameters(dataElement.getAsJsonObject(), context, builder);
     }
 
-    public static Map<String, FractalData.Parameter> deserializeParameters(JsonElement json, JsonDeserializationContext context) throws JsonParseException {
+    private static FractalData deserializeParameters(JsonObject json, JsonDeserializationContext context, FractalData.Builder builder) throws JsonParseException {
         // {
-        // "id": { "type": <type>, "value": ... }
+        // "id": "value"
         // }
         try {
-            JsonObject obj = (JsonObject) json;
-
-            Map<String, FractalData.Parameter> data = new TreeMap<>();
-
-            for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
+            for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
                 String id = entry.getKey();
+                JsonElement jsonValue = entry.getValue();
 
-                JsonObject item = entry.getValue().getAsJsonObject();
-
-                ParameterType type = ParameterType.fromString(item.get(TYPE_LABEL).getAsString());
-
-                if(type == null) {
-                    throw new NullPointerException("no such type");
-                }
-
-                JsonElement valueElement = item.get(VALUE_LABEL);
+                ParameterType type = builder.queryType(id);
 
                 Object value;
 
                 switch (type) { // nullptr is intended.
                     case Int: // fall through
                     case Color:
-                        value = valueElement.getAsNumber().intValue();
+                        value = jsonValue.getAsNumber().intValue();
                         break;
                     case Real:
-                        value = valueElement.getAsNumber().doubleValue();
+                        value = jsonValue.getAsNumber().doubleValue();
                         break;
                     case Expr:
-                        value = valueElement.getAsString();
+                        value = jsonValue.getAsString();
                         break;
                     case Bool:
-                        value = valueElement.getAsBoolean();
+                        value = jsonValue.getAsBoolean();
                         break;
                     case Cplx:
-                        value = context.deserialize(valueElement, Cplx.class);
+                        value = context.deserialize(jsonValue, Cplx.class);
                         break;
                     case Palette:
-                        value = context.deserialize(valueElement, Palette.class);
+                        value = context.deserialize(jsonValue, Palette.class);
                         break;
                     case Scale:
-                        value = context.deserialize(valueElement, Scale.class);
+                        value = context.deserialize(jsonValue, Scale.class);
                         break;
                     default:
                         throw new IllegalArgumentException("bad type: " + id + ", " + type);
                 }
 
-                data.put(id, new FractalData.Parameter(type, value));
+                builder.addParameter(id, value);
             }
 
-            return data;
+            return builder.commit();
         } catch(Throwable th) {
             throw new JsonParseException(th);
         }
     }
 
-    public static JsonElement serializeParameters(Map<String, FractalData.Parameter> src, JsonSerializationContext context) {
+    private static JsonElement serializeParameters(FractalData data, JsonSerializationContext context) {
         // {
-        // "id": { "type": <type>, "value": ... }
+        // "id": "value": ... }
         // }
         JsonObject obj = new JsonObject();
 
-        for(Map.Entry<String, FractalData.Parameter> entry : src.entrySet()) {
-            JsonObject jo = new JsonObject();
-
-            jo.addProperty(TYPE_LABEL, entry.getValue().type.identifier);
-            jo.add(VALUE_LABEL, context.serialize(entry.getValue().value));
-
-            obj.add(entry.getKey(), jo);
-        }
+        data.forEachParameter((id, value) -> obj.add(id, context.serialize(value)));
 
         return obj;
     }
@@ -173,10 +151,8 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
         return sourceCode.toString();
     }
 
-    private Map<String, FractalData.Parameter> oldGetParameters(JsonObject obj, JsonDeserializationContext context) {
+    private FractalData oldDeserializeParameters(JsonObject obj, JsonDeserializationContext context, FractalData.Builder builder) {
         // Fetch data.
-        Map<String, FractalData.Parameter> dataMap = new TreeMap<>();
-
         JsonObject data = obj.getAsJsonObject(OLD_DATA_LABEL);
 
         if (data != null) {
@@ -191,42 +167,42 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
             JsonObject scales = data.getAsJsonObject(OLD_SCALES_LABEL);
 
             if (ints != null) for (Map.Entry<String, JsonElement> entry : ints.entrySet()) {
-                dataMap.put(entry.getKey(), new FractalData.Parameter(ParameterType.Int, entry.getValue().getAsInt()));
+                builder.addParameter(entry.getKey(), entry.getValue().getAsInt());
             }
 
             if (reals != null)
                 for (Map.Entry<String, JsonElement> entry : reals.entrySet()) {
-                    dataMap.put(entry.getKey(), new FractalData.Parameter(ParameterType.Real, entry.getValue().getAsDouble()));
+                    builder.addParameter(entry.getKey(), entry.getValue().getAsDouble());
                 }
 
             if (cplxs != null)
                 for (Map.Entry<String, JsonElement> entry : cplxs.entrySet()) {
-                    dataMap.put(entry.getKey(), new FractalData.Parameter(ParameterType.Cplx, context.deserialize(entry.getValue(), Cplx.class)));
+                    builder.addParameter(entry.getKey(), context.deserialize(entry.getValue(), Cplx.class));
                 }
 
             if (bools != null)
                 for (Map.Entry<String, JsonElement> entry : bools.entrySet()) {
-                    dataMap.put(entry.getKey(), new FractalData.Parameter(ParameterType.Bool, entry.getValue().getAsBoolean()));
+                    builder.addParameter(entry.getKey(), entry.getValue().getAsBoolean());
                 }
 
             if (exprs != null)
                 for (Map.Entry<String, JsonElement> entry : exprs.entrySet()) {
-                    dataMap.put(entry.getKey(), new FractalData.Parameter(ParameterType.Expr, entry.getValue().getAsString()));
+                    builder.addParameter(entry.getKey(), entry.getValue().getAsString());
                 }
 
             if (colors != null)
                 for (Map.Entry<String, JsonElement> entry : colors.entrySet()) {
-                    dataMap.put(entry.getKey(), new FractalData.Parameter(ParameterType.Color, entry.getValue().getAsInt()));
+                    builder.addParameter(entry.getKey(), entry.getValue().getAsInt());
                 }
 
             if (palettes != null)
                 for (Map.Entry<String, JsonElement> entry : palettes.entrySet()) {
-                    dataMap.put(entry.getKey(), new FractalData.Parameter(ParameterType.Palette, context.deserialize(entry.getValue(), Palette.class)));
+                    builder.addParameter(entry.getKey(), context.deserialize(entry.getValue(), Palette.class));
                 }
 
             if (scales != null)
                 for (Map.Entry<String, JsonElement> entry : scales.entrySet()) {
-                    dataMap.put(entry.getKey(), new FractalData.Parameter(ParameterType.Scale, context.deserialize(entry.getValue(), Scale.class)));
+                    builder.addParameter(entry.getKey(), context.deserialize(entry.getValue(), Scale.class));
                 }
         }
 
@@ -238,9 +214,9 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
 
         if (element != null) {
             Scale scale = context.deserialize(element, Scale.class);
-            dataMap.put(Fractal.SCALE_LABEL, new FractalData.Parameter(ParameterType.Scale, scale));
+            builder.addParameter(Fractal.SCALE_LABEL, scale);
         }
 
-        return dataMap;
+        return builder.commit();
     }
 }

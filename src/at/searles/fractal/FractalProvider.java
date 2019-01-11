@@ -176,7 +176,7 @@ public class FractalProvider {
      * Sets the data of the current key fractal.
      */
     public void setKeyFractal(FractalData data) {
-        fractals.get(keyIndex).setData(data, false, true, false);
+        fractals.get(keyIndex).setData(data, true, false);
         fireParametersUpdated();
     }
 
