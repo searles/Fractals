@@ -60,7 +60,7 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
 
     private String getSourceCode(JsonObject obj) {
         JsonElement codeElement = obj.get(CODE_LABEL);
-
+//fixme
         if(codeElement == null || !codeElement.isJsonPrimitive() || !((JsonPrimitive) codeElement).isString()) {
             return oldGetSourceCode(obj);
         }

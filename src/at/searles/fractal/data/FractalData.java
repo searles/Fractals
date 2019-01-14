@@ -153,6 +153,10 @@ public class FractalData implements Iterable<String> {
         }
 
         public ParameterType queryType(String id) {
+            if(id.equals(Fractal.SCALE_LABEL)) {
+                // xxx in new impl i would avoid such checks
+                return ParameterType.Scale;
+            }
             return FractalData.queryType(id, externDecls);
         }
 
