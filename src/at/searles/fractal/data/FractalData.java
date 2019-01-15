@@ -21,8 +21,6 @@ public class FractalData implements Iterable<String> {
     private final Map<String, ExternDeclaration> externDecls;
     private final Ast ast;
 
-    // todo querytype pf scale and source
-
     private FractalData(String source, Ast ast, Map<String, ExternDeclaration> externDecls, Map<String, Object> parameters) {
         this.source = source;
         this.ast = ast;
@@ -157,6 +155,7 @@ public class FractalData implements Iterable<String> {
                 // xxx in new impl i would avoid such checks
                 return ParameterType.Scale;
             }
+
             return FractalData.queryType(id, externDecls);
         }
 

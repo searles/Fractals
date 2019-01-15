@@ -42,13 +42,12 @@ public class ParserInstance {
     public Ast parseSource(String sourceCode) {
         ParserStream stream = ParserStream.fromString(sourceCode);
 
-        Ast ast = Ast.parse(env, stream);
+        return Ast.parse(env, stream);
 
-        if(!stream.isEmpty()) {
-            // TODO 2018-07-11: There should be some warning in this case.
-            throw new MeelanException("not fully parsed!", null);
-        }
-
-        return ast;
+//        if(!stream.isEmpty()) {
+//            // TODO 2018-07-11: There should be some warning in this case
+//            // TODO but no exception because of backwards compatibility.
+//            // throw new MeelanException("not fully parsed!", null);
+//        }
     }
 }

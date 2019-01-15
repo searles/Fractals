@@ -7,9 +7,11 @@ import at.searles.math.Cplx;
 import at.searles.math.Scale;
 import at.searles.math.color.Palette;
 import com.google.gson.*;
+import com.google.gson.internal.LazilyParsedNumber;
 
 import java.lang.reflect.Type;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDeserializer<FractalData> {
 
@@ -60,7 +62,7 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
 
     private String getSourceCode(JsonObject obj) {
         JsonElement codeElement = obj.get(CODE_LABEL);
-//fixme
+
         if(codeElement == null || !codeElement.isJsonPrimitive() || !((JsonPrimitive) codeElement).isString()) {
             return oldGetSourceCode(obj);
         }
@@ -88,55 +90,72 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
                 String id = entry.getKey();
                 JsonElement jsonValue = entry.getValue();
 
-                ParameterType type = builder.queryType(id);
+                Object value = null;
 
-                Object value;
+                if(jsonValue.isJsonPrimitive()) {
+                    JsonPrimitive jsonPrimitive = jsonValue.getAsJsonPrimitive();
 
-                switch (type) { // nullptr is intended.
-                    case Int: // fall through
-                    case Color:
-                        value = jsonValue.getAsNumber().intValue();
-                        break;
-                    case Real:
-                        value = jsonValue.getAsNumber().doubleValue();
-                        break;
-                    case Expr:
-                        value = jsonValue.getAsString();
-                        break;
-                    case Bool:
-                        value = jsonValue.getAsBoolean();
-                        break;
-                    case Cplx:
+                    if(jsonPrimitive.isBoolean()) {
+                        value = jsonPrimitive.getAsBoolean();
+                    } else if(jsonPrimitive.isNumber()) {
+                        value = jsonPrimitive.getAsBigDecimal();
+                    } else if(jsonPrimitive.isString()) {
+                        value = jsonPrimitive.getAsString();
+                    } else {
+                        // This should not happen since the list above is exhaustive.
+                        throw new UnsupportedOperationException("this is actually a bug");
+                    }
+                } else if(jsonValue.isJsonArray()) {
+                    // scale or palette. get a hint.
+                    if(jsonValue.getAsJsonArray().size() == 2) {
                         value = context.deserialize(jsonValue, Cplx.class);
-                        break;
-                    case Palette:
-                        value = context.deserialize(jsonValue, Palette.class);
-                        break;
-                    case Scale:
+                    } else {
                         value = context.deserialize(jsonValue, Scale.class);
-                        break;
-                    default:
-                        throw new IllegalArgumentException("bad type: " + id + ", " + type);
+                    }
+                } else if(jsonValue.isJsonObject()) {
+                    value = context.deserialize(jsonValue, Palette.class);
                 }
 
-                builder.addParameter(id, value);
+//                switch (type) { // nullptr is intended.
+//                    case Int: // fall through
+//                    case Color:
+//                        value = jsonValue.getAsNumber().intValue();
+//                        break;
+//                    case Real:
+//                        value = jsonValue.getAsNumber().doubleValue();
+//                        break;
+//                    case Expr:
+//                        value = jsonValue.getAsString();
+//                        break;
+//                    case Bool:
+//                        value = jsonValue.getAsBoolean();
+//                        break;
+//                    case Cplx:
+//                        value = context.deserialize(jsonValue, Cplx.class);
+//                        break;
+//                    case Palette:
+//                        value = context.deserialize(jsonValue, Palette.class);
+//                        break;
+//                    case Scale:
+//                        value = context.deserialize(jsonValue, Scale.class);
+//                        break;
+//                    default:
+//                        throw new IllegalArgumentException("bad type: " + id + ", " + type);
+//                }
+
+                if(value != null) {
+                    if (!builder.addParameter(id, value)) {
+                        // fixme Logger.getLogger("FractalDataAdapter", "ignoring undefined parameter " + id + " that was " + value);
+                    }
+                } else {
+                    // fixme Logger.getLogger("FractalDataAdapter", "value with type " + builder.queryType(id) + " is ignored. It is formatted as " + jsonValue);
+                }
             }
 
             return builder.commit();
         } catch(Throwable th) {
             throw new JsonParseException(th);
         }
-    }
-
-    private static JsonElement serializeParameters(FractalData data, JsonSerializationContext context) {
-        // {
-        // "id": "value": ... }
-        // }
-        JsonObject obj = new JsonObject();
-
-        data.forEachParameter((id, value) -> obj.add(id, context.serialize(value)));
-
-        return obj;
     }
 
     private String oldGetSourceCode(JsonObject obj) {
@@ -218,5 +237,19 @@ public class FractalDataAdapter implements JsonSerializer<FractalData>, JsonDese
         }
 
         return builder.commit();
+    }
+
+
+    private static JsonElement serializeParameters(FractalData data, JsonSerializationContext context) {
+        // {
+        // "id": ... }
+        // }
+        JsonObject obj = new JsonObject();
+
+        data.forEachParameter((id, value) -> {
+            obj.add(id, context.serialize(value));
+        });
+
+        return obj;
     }
 }

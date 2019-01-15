@@ -41,7 +41,7 @@ public enum ParameterType {
 
         @Override
         public boolean isInstance(Object value) {
-            return value instanceof Integer;
+            return value instanceof Number;
         }
     },
     Real("real") {
@@ -166,12 +166,12 @@ public enum ParameterType {
                 throw new TypeCastException(this, value);
             }
 
-            return new Int((Integer) value);
+            return new Int(((Number) value).intValue());
         }
 
         @Override
         public boolean isInstance(Object value) {
-            return value instanceof Integer;
+            return value instanceof Number;
         }
     },
     Palette("palette") {
