@@ -1,21 +1,14 @@
 package at.searles.fractal.data;
 
-import at.searles.fractal.FractviewInstructionSet;
 import at.searles.fractal.ParserInstance;
 import at.searles.math.Cplx;
 import at.searles.math.Scale;
 import at.searles.math.color.Palette;
 import at.searles.meelan.MeelanException;
-import at.searles.meelan.ops.cons.Cons;
 import at.searles.meelan.optree.Tree;
 import at.searles.meelan.optree.Vec;
-import at.searles.meelan.optree.compiled.App;
-import at.searles.meelan.optree.inlined.Frame;
-import at.searles.meelan.symbols.IdResolver;
-import at.searles.meelan.symbols.SymTable;
 import at.searles.meelan.values.*;
 
-import java.util.LinkedList;
 import java.util.List;
 
 public enum ParameterType {
@@ -111,8 +104,8 @@ public enum ParameterType {
     Bool("bool") {
         @Override
         public Object toValue(Tree tree) {
-            if(tree instanceof at.searles.meelan.values.Bool) {
-                return ((at.searles.meelan.values.Bool) tree).value();
+            if(tree instanceof Bool) {
+                return ((Bool) tree).value();
             }
 
             throw new MeelanException("not a bool", tree);
@@ -151,7 +144,7 @@ public enum ParameterType {
 
         @Override
         public boolean isInstance(Object value) {
-            return true;
+            return value instanceof String;
         }
     },
     Color("color") {
@@ -175,94 +168,6 @@ public enum ParameterType {
         }
     },
     Palette("palette") {
-//        List<List<Integer>> toTable(Tree tree) {
-//            if(!(tree instanceof Vec)) {
-//                throw new MeelanException("not a table", tree);
-//            }
-//
-//            List<Tree> values = ((Vec) tree).values();
-//
-//            if(values.isEmpty()) {
-//                throw new MeelanException("palette must not be empty", tree);
-//            }
-//
-//            List<List<Integer>> palette = new ArrayList<>(values.size());
-//
-//            if(!(values.get(0) instanceof Vec)) {
-//                // [ c, c, c]
-//                List<Integer> row = toRow(tree);
-//
-//                for(Integer color : row) {
-//                    palette.add(Collections.singletonList(color));
-//                }
-//
-//                return palette;
-//            }
-//
-//            palette.addAll(values.stream().map(this::toRow).collect(Collectors.toList()));
-//
-//            return palette;
-//        }
-//
-//        private List<Integer> toRow(Tree tree) {
-//            if(tree instanceof at.searles.meelan.values.Int) {
-//                return Collections.singletonList(toColor(tree));
-//            } else if(tree instanceof Vec) {
-//                ArrayList<Integer> row = ((Vec) tree).values().stream().map(this::toColor).collect(Collectors.toCollection(ArrayList::new));
-//
-//                return row;
-//            }
-//
-//            throw new MeelanException("not a palette row", tree);
-//        }
-////
-////        private Integer toColor(Tree tree) {
-////            if(tree instanceof at.searles.meelan.values.Int) {
-////                return ((at.searles.meelan.values.Int) tree).value();
-////            }
-////
-////            throw new MeelanException("", tree);
-////        }
-////
-////        public Palette toValu2e(Tree tree) {
-////            List<List<Integer>> table;
-////
-////            if(tree instanceof at.searles.meelan.values.Int) {
-////                table = Collections.singletonList(Collections.singletonList(((at.searles.meelan.values.Int) tree).value()));
-////            } else {
-////                table = toTable(tree);
-////            }
-////
-////            int height = table.size();
-////
-////            if(height == 0) {
-////                return new Palette(1, 1, new int[]{0xff000000});
-////            }
-////
-////            int width = 1;
-////
-////            for(List<Integer> row : table) {
-////                width = Math.max(row.size(), width);
-////            }
-////
-////            int colors[] = new int[height * width];
-////
-////            int y = 0;
-////
-////            for(List<Integer> row : table) {
-////                // if row is empty, use black.
-////                for(int x = 0; x < width; ++x) {
-////                    int color = row.size() > 0 ? row.get(x % row.size()) : 0xff000000;
-////
-////                    colors[y * width + x] = color;
-////                }
-////
-////                y++;
-////            }
-////
-////            return new Palette(width, height, colors);
-////        }
-
         @Override
         public Palette toValue(Tree tree) {
             if(!(tree instanceof Vec)) {
@@ -307,7 +212,7 @@ public enum ParameterType {
 
         @Override
         public boolean isInstance(Object value) {
-            return value instanceof Value;
+            return value instanceof Palette;
         }
 
         @Override

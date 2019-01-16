@@ -145,9 +145,9 @@ public class FractalProviderTest {
 
         withProvider();
 
-        provider.setParameterValue("b", -1, 2); // should set value in both
+        provider.setParameterValue("b", -1, 2);
 
-        Assert.assertEquals(2, provider.getParameterValue("b", -1));
+        Assert.assertEquals("0", provider.getParameterValue("b", -1));
     }
 
     @Test

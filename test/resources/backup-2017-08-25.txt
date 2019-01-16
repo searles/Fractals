@@ -29271,7 +29271,7 @@
       ],
       "arguments": {
         "reals": {
-          "bailout": 5.12E8
+          "bailout": 500
         },
         "cplxs": {
           "lightvector": [

@@ -18,6 +18,8 @@ public class FavoriteEntryAdapter implements JsonDeserializer<FavoriteEntry>, Js
         try {
             // In older versions, key and descriptor did not exist in this object.
             JsonObject obj = (JsonObject) json;
+
+            // fixme next line lazy
             FractalData fractal = context.deserialize(obj.get(FRACTAL_LABEL), FractalData.class);
 
             byte[] icon = null;

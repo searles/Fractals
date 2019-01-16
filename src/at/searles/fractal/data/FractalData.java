@@ -74,14 +74,6 @@ public class FractalData implements Iterable<String> {
     }
 
     public ParameterType queryType(String id) {
-        if(id.equals(Fractal.SCALE_LABEL)) {
-            return ParameterType.Scale;
-        }
-
-        if(id.equals(Fractal.SOURCE_LABEL)) {
-            throw new IllegalArgumentException("source must be handled in a different way");
-        }
-
         return queryType(id, externDecls);
     }
 
@@ -90,6 +82,14 @@ public class FractalData implements Iterable<String> {
     }
 
     private static ParameterType queryType(String id, Map<String, ExternDeclaration> externDecls) {
+        if(id.equals(Fractal.SCALE_LABEL)) {
+            return ParameterType.Scale;
+        }
+
+        if(id.equals(Fractal.SOURCE_LABEL)) {
+            throw new IllegalArgumentException("source must be handled in a different way");
+        }
+
         ExternDeclaration decl = externDecls.get(id);
 
         if(decl == null) {
@@ -151,11 +151,6 @@ public class FractalData implements Iterable<String> {
         }
 
         public ParameterType queryType(String id) {
-            if(id.equals(Fractal.SCALE_LABEL)) {
-                // xxx in new impl i would avoid such checks
-                return ParameterType.Scale;
-            }
-
             return FractalData.queryType(id, externDecls);
         }
 

@@ -3,6 +3,7 @@ package at.searles.fractal.test;
 import at.searles.fractal.data.FractalData;
 import at.searles.fractal.entries.FavoriteEntry;
 import at.searles.fractal.gson.Serializers;
+import at.searles.math.color.Palette;
 import at.searles.meelan.ops.numeric.Fract;
 import org.junit.Assert;
 import org.junit.Test;
@@ -65,7 +66,7 @@ public class JsonTest {
 
     @Test
     public void testAddBadArguments() {
-        String json = "// Lyapunov\n" +
+        String source = "// Lyapunov\n" +
                 "var x int, y int, color int;\n" +
                 "\n" +
                 "func get_color(c, value) {\n" +
@@ -232,7 +233,12 @@ public class JsonTest {
                 "do_pixel(x, y)\n";
 
         FractalData.Builder builder = new FractalData.Builder();
-        builder.addParameter("warmup", "1");
+        builder.setSource(source);
+        Assert.assertEquals(true, builder.addParameter("warmup", "1"));
+        Assert.assertEquals(false, builder.addParameter("warmup", 1));
+        Assert.assertEquals(true, builder.addParameter("Positive_Palette", new Palette(1, 1, new int[]{0})));
+
+        // true because it is an expr.
     }
 
     private void parseCollection() {
