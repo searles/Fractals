@@ -139,6 +139,13 @@ public class FractalData implements Iterable<String> {
             return this;
         }
 
+        public boolean isExternDecl(String id) {
+            return externDecls.containsKey(id);
+        }
+
+        /**
+         * @return true if id is an extern whose type matches value.
+         */
         public boolean addParameter(String id, Object value) {
             ParameterType type = queryType(id);
 

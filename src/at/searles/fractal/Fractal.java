@@ -90,7 +90,7 @@ public class Fractal {
     private final List<Listener> listeners;
 
     public static Fractal fromData(FractalData data) throws MeelanException {
-        Fractal fractal = new Fractal(data);
+        Fractal fractal = new Fractal(data, true);
 
         // Compilation must happen here to catch compile errors
 
@@ -98,10 +98,19 @@ public class Fractal {
         return fractal;
     }
 
-    private Fractal(FractalData data) {
+    public static Fractal fromSource(String source) throws MeelanException {
+        Fractal fractal = new Fractal(new FractalData.Builder().setSource(source).commit(), false);
+
+        // Compilation must happen here to catch compile errors
+
+        fractal.compile();
+        return fractal;
+    }
+
+    private Fractal(FractalData data, boolean allowInlined) {
         this.data = data;
 
-        this.resolver = new FractalResolver();
+        this.resolver = new FractalResolver(allowInlined);
 
         this.listeners = new LinkedList<>();
 
@@ -179,7 +188,7 @@ public class Fractal {
                 true
         ));
 
-        // place holder to preserve order. It will be added afterwards
+        // placeholder to preserve order. It will be added afterwards
         entries.put(SCALE_LABEL, null);
 
         // next instruction will update 'entries' and 'parameterOrder'
@@ -381,6 +390,12 @@ public class Fractal {
          */
         private String lastLabel;
 
+        private final boolean allowInlined;
+
+        FractalResolver(boolean allowInlined) {
+            this.allowInlined = allowInlined;
+        }
+
         private Tree paletteLambda(String id) {
             // 1. get index of this palette
             // 2. return 'palette(index)
@@ -504,8 +519,12 @@ public class Fractal {
                 return instruction;
             }
 
-            // Inlined value - create expr parameter.
-            return inlinedEntry(id);
+            if(allowInlined) {
+                // Inlined value - create expr parameter.
+                return inlinedEntry(id);
+            }
+
+            return null;
         }
     }
 }
