@@ -199,8 +199,14 @@ public class Fractal {
         palettes.clear();
 
         for(String paletteId : paletteIds) {
-            Palette p = (Palette) getParameter(paletteId).value;
-            palettes.add(p);
+            Parameter parameter = getParameter(paletteId);
+
+            if(parameter != null) {
+                palettes.add((Palette) parameter.value);
+            } else {
+                // add a tiny dummy.
+                palettes.add(new Palette(1, 1, new int[]{0}));
+            }
         }
 
         // and update scale

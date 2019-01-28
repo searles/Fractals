@@ -51,7 +51,7 @@ template Calculation(colorizer) {
 
             var znext cplx = function;
 
-            if colorizer.check(znext, z, zlast, index, p, c) then {
+            if not colorizer.check(znext, z, zlast, index, p, c) then {
                 // update returns true if no break condition is satisfied.
                 zlast = z;
                 z = znext;
