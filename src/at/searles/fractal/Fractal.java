@@ -278,16 +278,19 @@ public class Fractal {
         return entries.get(id);
     }
 
-    public boolean setValue(String id, Object value) {
-        Parameter current = entries.get(id);
+    /**
+     * Returns true if the value has been updated.
+     */
+    public boolean updateValue(String key, Object value) {
+        Parameter current = entries.get(key);
         if(current == null || (value != null && !current.type.isInstance(value))) {
             return false;
         }
 
-        if(id.equals(SOURCE_LABEL)) {
+        if(key.equals(SOURCE_LABEL)) {
             setData(this.data.copySetSource((String) value), true, false);
         } else {
-            FractalData newData = value != null ? data.copySetParameter(id, value) : data.copyResetParameter(id);
+            FractalData newData = value != null ? data.copySetParameter(key, value) : data.copyResetParameter(key);
             setData(newData, true, false);
         }
 

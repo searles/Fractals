@@ -11,7 +11,12 @@ public class PlainCompilerTest {
     @Test
     public void testNewDefault() throws IOException {
         withFile("NewDefault.fv");
-        // TODO: Unset hasBailout: NPE
+        actCompile();
+    }
+
+    @Test
+    public void testNewDefaultWith3D() throws IOException {
+        withFile("NewDefaultWith3D.fv");
         actCompile();
     }
 

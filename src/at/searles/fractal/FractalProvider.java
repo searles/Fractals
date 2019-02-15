@@ -3,7 +3,6 @@ package at.searles.fractal;
 import at.searles.fractal.data.FractalData;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.TreeSet;
 
 /**
@@ -12,75 +11,121 @@ import java.util.TreeSet;
  */
 public class FractalProvider {
 
-    private final ArrayList<Fractal> fractals;
+    private final FractalCollection collection;
+
+    private ParameterTable table;
+    private boolean isTableValid;
+
     private final ArrayList<Listener> listeners;
-
-    private final ParameterTable parameterTable;
-
-    /**
-     * Parameters that must be set for each fractal. Should be
-     * empty if this provider contains only one fractal.
-     */
-    private final TreeSet<String> exclusiveParameterIds;
-
-    private int keyIndex = -1;
+    private TreeSet<String> exclusiveParameters;
 
     public FractalProvider() {
-        this.fractals = new ArrayList<>(2);
-        this.exclusiveParameterIds = new TreeSet<>();
+        this.collection = new FractalCollection();
+        this.exclusiveParameters = new TreeSet<>();
         listeners = new ArrayList<>(2);
-        this.parameterTable = new ParameterTable(this);
+        table = new ParameterTable();
+        isTableValid = false;
     }
+
+    private ParameterTable table() {
+        if(!isTableValid) {
+            table.init(collection, exclusiveParameters);
+            isTableValid = true;
+        }
+
+        return table;
+    }
+
+    private void invalidateTable() {
+        isTableValid = false;
+    }
+
+
+    public boolean updateParameterValue(String key, int id, Object value) {
+        if(!collection.get(id).updateValue(key, value)) {
+            return false;
+        }
+
+        invalidateTable();
+        return true;
+    }
+
+    public boolean updateAllParameterValue(String key, Object value) {
+        boolean status = false;
+        for(Fractal fractal : collection.fractals()) {
+            status |= fractal.updateValue(key, value);
+        }
+
+        if(status) {
+            invalidateTable();
+        }
+
+        return status;
+    }
+
 
     // === Handle parameters ===
 
     private void fireParametersUpdated() {
-        parameterTable.invalidate();
         for(Listener l : listeners) {
             l.parameterMapUpdated(this);
         }
     }
 
-    public ParameterEntry getParameterEntryByIndex(int position) {
-        return parameterTable.get(position);
+    /**
+     * Uses the position of the parameter.
+     */
+    public ParameterTable.Entry getParameterEntryByIndex(int position) {
+        return table().get(position);
     }
 
     /**
      * Returns the parameter with the key and owner. If it is a
      * shared parameter, the shared visible value is returned. {@code owner}
-     * is ignored in this case. returns {@code null} if
+     * is ignored in this case.
+     * @return returns {@code null} if
      * it does not exist.
      */
-    public ParameterEntry getParameterEntry(String id, int owner) {
-        return parameterTable.get(id, owner);
+    public ParameterTable.Entry getParameterEntry(String id, int owner) {
+        return table().get(id, owner);
     }
 
     /**
      * Convenience; returns null if getParameterEntry returns null.
      */
     public Object getParameterValue(String id, int owner) {
-        ParameterEntry parameterEntry = getParameterEntry(id, owner);
+        ParameterTable.Entry parameterEntry = getParameterEntry(id, owner);
 
         return parameterEntry != null ? parameterEntry.parameter.value : null;
+    }
+
+    private boolean setIndividualParameterValue(String key, int id, Object value) {
+        boolean updated = collection.get(id).updateValue(key, value);
+
+        if(updated) {
+            invalidateTable();
+        }
+
+        return updated;
     }
 
     /**
      * Sets the parameter. If parameter is shared, parameter is set in
      * all fractals. The value is set directly in all fractals.
      */
-    public void setParameterValue(String id, int owner, Object value) {
-        boolean somethingChanged = false;
+    public void setParameterValue(String key, int id, Object value) {
+        boolean updated = false;
 
-        if(exclusiveParameterIds.contains(id)) {
-            Fractal fractal = fractals.get(owner);
-            somethingChanged = fractal.setValue(id, value);
+        if(exclusiveParameters.contains(key)) {
+            updated = setIndividualParameterValue(key, id, value);
         } else {
-            for (Fractal fractal : fractals) {
-                somethingChanged |= fractal.setValue(id, value);
+            // for all ids
+            for(Integer i : collection.ids()) {
+                updated |= setIndividualParameterValue(key, i, value);
             }
         }
 
-        if(somethingChanged) {
+        if(updated) {
             fireParametersUpdated();
         }
     }
@@ -91,20 +136,16 @@ public class FractalProvider {
      * Adds a new fractal to the end of the list. If there
      * was no fractal before, then the key-index is set to 0.
      * @param fractalData The data of the new fractal
-     * @return The index.
+     * @return The id.
      */
     public int addFractal(FractalData fractalData) {
         Fractal fractal = Fractal.fromData(fractalData);
+        int id = collection.add(fractal);
 
-        fractals.add(fractal);
-
-        if(keyIndex < 0) {
-            keyIndex = 0;
-        }
-
+        invalidateTable();
         fireParametersUpdated();
 
-        return fractals.size() - 1;
+        return id;
     }
 
     /**
@@ -113,31 +154,25 @@ public class FractalProvider {
      * If this was the last fractal, then the key index is invalid (-1)
      * @return the index of the removed fractal.
      */
-    public int removeFractal() {
-        int removedIndex = keyIndex;
-
-        fractals.remove(keyIndex);
-
-        if(keyIndex > 0 || fractals.size() == 0) {
-            keyIndex--;
-        }
-
+    public boolean removeFractal(int id) {
+        boolean status = collection.remove(id);
+        invalidateTable();
         fireParametersUpdated();
-        return removedIndex;
+        return status;
     }
 
     // === Getters ===
 
     public int fractalCount() {
-        return fractals.size();
+        return collection.size();
     }
 
     public int parameterCount() {
-        return parameterTable.count();
+        return table().count();
     }
 
-    public Fractal getFractal(int index) {
-        return fractals.get(index);
+    public Fractal getFractal(int id) {
+        return collection.get(id);
     }
 
     // === Handle listeners ===
@@ -152,8 +187,10 @@ public class FractalProvider {
 
     // === History ===
 
-    public boolean historyForward(int index) {
-        if(getFractal(index).historyForward()) {
+    // FIXME history should be moved.
+
+    public boolean historyForward(int id) {
+        if(getFractal(id).historyForward()) {
             fireParametersUpdated();
             return true;
         }
@@ -161,8 +198,8 @@ public class FractalProvider {
         return false;
     }
 
-    public boolean historyBack(int index) {
-        if(getFractal(index).historyBack()) {
+    public boolean historyBack(int id) {
+        if(getFractal(id).historyBack()) {
             fireParametersUpdated();
             return true;
         }
@@ -175,59 +212,41 @@ public class FractalProvider {
     /**
      * Sets the data of the current key fractal.
      */
-    public void setKeyFractal(FractalData data) {
-        fractals.get(keyIndex).setData(data, true, false);
+    public void setFractal(int ownerId, FractalData data) {
+        collection.get(ownerId).setData(data, true, false);
         fireParametersUpdated();
-    }
-
-    public void setKeyIndex(int newKeyIndex) {
-        if(newKeyIndex < 0 || fractalCount() <= newKeyIndex) {
-            throw new IllegalArgumentException("out of range");
-        }
-
-        this.keyIndex = newKeyIndex;
-        fireParametersUpdated();
-    }
-
-    public int keyIndex() {
-        return keyIndex;
     }
 
     // === Handle exclusive parameters ===
 
-    public Iterator<String> exclusiveParameters() {
-        return exclusiveParameterIds.iterator();
-    }
-
     public boolean isSharedParameter(String id) {
-        return !exclusiveParameterIds.contains(id);
+        return !exclusiveParameters.contains(id);
     }
 
     public void removeExclusiveParameter(String id) {
-        if(this.exclusiveParameterIds.remove(id)) {
+        if(exclusiveParameters.remove(id)) {
+            invalidateTable();
             fireParametersUpdated();
         }
     }
 
     public void addExclusiveParameter(String id) {
-        if(this.exclusiveParameterIds.add(id)) {
+        if(exclusiveParameters.add(id)) {
+            invalidateTable();
             fireParametersUpdated();
         }
     }
 
-    // === Internal data structures ===
-
-    public static class ParameterEntry {
-        public final String id;
-        public final int owner;
-        public final Fractal.Parameter parameter;
-
-        ParameterEntry(String id, int owner, Fractal.Parameter parameter) {
-            this.id = id;
-            this.owner = owner;
-            this.parameter = parameter;
-        }
+    public void setKeyId(int keyId) {
+        collection.setKeyId(keyId);
+        invalidateTable();
     }
+
+    public int keyId() {
+        return collection.keyId();
+    }
+
+    // === Internal data structures ===
 
     public interface Listener {
         /**

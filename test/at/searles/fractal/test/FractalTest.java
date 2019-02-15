@@ -44,7 +44,7 @@ public class FractalTest {
     public void testResetParameter() {
         Fractal fractal = fromSource("extern a int = 1; var x = a;", "a", ParameterType.Int, 2);
 
-        fractal.setValue("a", null);
+        fractal.updateValue("a", null);
 
         Assert.assertEquals(1, fractal.code()[1]);
     }
@@ -53,7 +53,7 @@ public class FractalTest {
     public void testAddExternParameter() {
         Fractal fractal = fromSource("extern a expr = \"1\"; var x = a;");
 
-        fractal.setValue("a", "b"); // b is now a new extern parameter.
+        fractal.updateValue("a", "b"); // b is now a new extern parameter.
 
         Assert.assertNotNull(fractal.getParameter("b"));
     }
@@ -62,15 +62,15 @@ public class FractalTest {
     public void testKeepExternParameter() {
         Fractal fractal = fromSource("extern a expr = \"1\"; var x = a;");
 
-        fractal.setValue("a", "b"); // b is now a new extern parameter.
+        fractal.updateValue("a", "b"); // b is now a new extern parameter.
 
-        fractal.setValue("b", "13");
+        fractal.updateValue("b", "13");
 
-        fractal.setValue("a", "0");
+        fractal.updateValue("a", "0");
 
         Assert.assertNull(fractal.getParameter("b"));
 
-        fractal.setValue("a", "b");
+        fractal.updateValue("a", "b");
 
         Assert.assertNotNull(fractal.getParameter("b"));
         Assert.assertEquals("13", fractal.getParameter("b").value);
