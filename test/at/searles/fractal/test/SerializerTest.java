@@ -1,14 +1,35 @@
 package at.searles.fractal.test;
 
+import at.searles.fractal.FractalProvider;
 import at.searles.fractal.data.FractalData;
 import at.searles.fractal.entries.FavoriteEntry;
 import at.searles.fractal.gson.Serializers;
+import org.junit.Assert;
 import org.junit.Test;
 
-/**
- * Created by searles on 14.01.19.
- */
 public class SerializerTest {
+
+    @Test
+    public void serializeProviderTest() {
+        FractalProvider provider = new FractalProvider();
+
+        FractalData.Builder builder1 = new FractalData.Builder().setSource("var x = 1;");
+        builder1.addParameter("x", 2);
+
+        FractalData.Builder builder2 = new FractalData.Builder().setSource("extern A int = 2; var x = A;");
+        builder2.addParameter("A", 3);
+
+        provider.addFractal(builder1.commit());
+        provider.addFractal(builder2.commit());
+
+        provider.addExclusiveParameter("A");
+
+        String json = Serializers.serializer().toJson(provider);
+
+        FractalProvider provider1 = Serializers.serializer().fromJson(json, FractalProvider.class);
+
+        Assert.assertFalse(provider1.isSharedParameter("A"));
+    }
 
     @Test
     public void deserializeV4Test() {

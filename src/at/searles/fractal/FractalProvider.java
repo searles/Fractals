@@ -12,12 +12,12 @@ import java.util.TreeSet;
 public class FractalProvider {
 
     private final FractalCollection collection;
+    private final TreeSet<String> exclusiveParameters;
 
-    private ParameterTable table;
-    private boolean isTableValid;
+    private transient final ArrayList<Listener> listeners;
 
-    private final ArrayList<Listener> listeners;
-    private TreeSet<String> exclusiveParameters;
+    private transient ParameterTable table;
+    private transient boolean isTableValid;
 
     public FractalProvider() {
         this.collection = new FractalCollection();
@@ -244,6 +244,14 @@ public class FractalProvider {
 
     public int keyId() {
         return collection.keyId();
+    }
+
+    public Iterable<Integer> fractalIds() {
+        return collection.ids();
+    }
+
+    public Iterable<String> exclusiveParameters() {
+        return exclusiveParameters;
     }
 
     // === Internal data structures ===

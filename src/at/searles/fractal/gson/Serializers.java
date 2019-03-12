@@ -1,5 +1,6 @@
 package at.searles.fractal.gson;
 
+import at.searles.fractal.FractalProvider;
 import at.searles.fractal.data.FractalData;
 import at.searles.fractal.entries.FavoriteEntry;
 import at.searles.fractal.gson.adapters.*;
@@ -35,6 +36,8 @@ public class Serializers {
 
             gsonBuilder.registerTypeAdapter(FavoriteEntry.Collection.class,
                     new CollectionAdapter<>(FavoriteEntry.class, FavoriteEntry.Collection::new));
+
+            gsonBuilder.registerTypeAdapter(FractalProvider.class, new FractalProviderAdapter());
 
             gsonBuilder.setLenient();
 
